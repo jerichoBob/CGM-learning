@@ -19,37 +19,8 @@ flux_filename = base_path+"/J1429_rb_flux.fits"
 
 f1 = fits.open(flux_filename)
 hdr=f1[0].header
-
-# print(flux_filename)
-# def check_key(hdr, key):
-#     if key in hdr:
-#         print(key,"=",hdr[key])
-#         return(True)
-#     else:
-#         print(key," not present")
-#         return(False)
-
-# cd_cdelta3 = -1; # this takes the place of CD3_3
-# if check_key(hdr, 'CD3_3'):
-#     cd_cdelta3 = hdr['CD3_3']
-# elif check_key(hdr, 'CDELT3'):
-#     cd_cdelta3 = hdr['CDELT3']
-# else:
-#     print("Can't read ", flux_filename)
-#     print("aborting...")
-#     sys.exit()
-
-# print("cd_cdelta3: ", cd_cdelta3)
-# crval3 = hdr['CRVAL3']
-# crpix3 = hdr['CRPIX3']
-# wavedim = hdr['NAXIS3']
-# # Do it
-# #wave = crval3 + (crpix3 + np.arange(0, wavedim, 1.0)) * cd3_3
-# wave = crval3 + cd_cdelta3 * (np.arange(wavedim) + 1. - crpix3)
-# print(cd_cdelta3)
-# print(hdr.size())
 data=f1[0].data
-wave=ku.build_wave(hdr)
+wave=ku.build_wave(hdr)  # updated kcwitools.utils.build_wave to handle a missing CD3_3 from the header
 wl_image=build_whitelight(hdr, data)
 
 # our list of x,y locations on the source image to extract the wavelength
@@ -66,43 +37,31 @@ alignment = [ # [ha, va] :: ha={'left', 'center', 'right'} va={'bottom', 'baseli
     ['center', 'top']
 ]; 
 
-
 fig = plt.figure()
-grid_size = (12,7)
-fig = plt.figure(figsize=(14,8))
+grid_size = (16,8)
+fig = plt.figure(figsize=grid_size)
 
-ax0 = plt.subplot2grid(grid_size, (1, 0), colspan=3, rowspan=4)
+ax0 = plt.subplot2grid(grid_size, (1, 0), colspan=8, rowspan=4)
 ax = [];
-ax.append(plt.subplot2grid(grid_size, (0, 3), colspan=4, rowspan=2))
-ax.append(plt.subplot2grid(grid_size, (2, 3), colspan=4, rowspan=2))
-ax.append(plt.subplot2grid(grid_size, (4, 3), colspan=4, rowspan=2))
-ax.append(plt.subplot2grid(grid_size, (6, 3), colspan=4, rowspan=2))
-ax.append(plt.subplot2grid(grid_size, (8, 3), colspan=4, rowspan=2))
-ax.append(plt.subplot2grid(grid_size, (10, 3), colspan=4, rowspan=2))
-
-
-ax[0].tick_params(top=False, bottom=False, labeltop=False, labelbottom=False)
-ax[1].tick_params(top=False, bottom=False, labeltop=False, labelbottom=False)
-ax[2].tick_params(top=False, bottom=False, labeltop=False, labelbottom=False)
-
-
-axnext = fig.add_axes([0.81, 0.05, 0.10, 0.03]) # left, bottom, width, height
-# bnext = Button(axnext, 'Extract')
-# bnext.on_clicked(extract_data)
-# sslider.on_changed(update_sourceRange)
-# cslider.on_changed(update_continuumRange)
-
+graph_count = 6 
+graph_x = 4
+graph_rows = 2
+graph_cols = 4
+for i in range(graph_count):
+    print(i)
+    ax.append(plt.subplot2grid(grid_size, (graph_rows*i, graph_x), colspan=graph_cols, rowspan=graph_rows))
+    if i != graph_count-1: 
+        ax[i].tick_params(top=False, bottom=False, labeltop=False, labelbottom=False)
 
 ax0.imshow(wl_image,origin="lower",interpolation="nearest",cmap="gnuplot",vmin=0)
-utils.plotbox(ax0, x_cen, y_cen, labels, alignment, 2, 'c')
+
+utils.plotbox(ax0, x_cen, y_cen, labels, alignment, 2, 'c') # identify/label the locations on the plot
 
 colors = ['r','g','b','y'];
 j = 0
 for j in range(6):
     flux = []
     for i in range(wave.size):
-        # print("i: ",i)
-        # print("wavelength: ",wave[i], "flux: ",data[i][y][x])
         flux.append(data[i][y_cen[j]][x_cen[j]])
     ax[j].plot(wave, flux, '-', color='black')
 
