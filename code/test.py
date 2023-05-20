@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 from matplotlib.gridspec import GridSpec
 from matplotlib.widgets import Slider, Button, TextBox, RangeSlider, RectangleSelector
 
-base_path = "/Users/robertseaton/Desktop/Physics-NCState/---Research/FITS data/J1429"
+base_path = "/Users/robertseaton/Desktop/Physics-NCState/---Research/FITS-data/J1429"
 
 # flux_filename = base_path+"/SGAS1429+1202.fits"
 # flux_filename = base_path+"/J1429_flux.fits"
@@ -55,7 +55,8 @@ for i in range(graph_count):
 
 ax0.imshow(wl_image,origin="lower",interpolation="nearest",cmap="gnuplot",vmin=0)
 
-utils.plotbox(ax0, x_cen, y_cen, labels, alignment, 2, 'c') # identify/label the locations on the plot
+# utils.plotbox(ax0, x_cen, y_cen, labels, alignment, 2, 'c') # identify/label the locations on the plot
+utils.plotcircle(pax0, x_cen, y_cen, labels, 1, 'c')
 
 colors = ['r','g','b','y'];
 j = 0
