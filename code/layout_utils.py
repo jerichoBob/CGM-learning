@@ -108,3 +108,19 @@ def make_image_flux_var_layout(plt):
 
     fig.tight_layout()
     return ax
+
+def clear_axes(ax):
+    ax.set_axis_off()
+    # ax.set_xticks([])
+    # ax.set_xticklabels([])
+    # ax.set_yticks([])
+    # ax.set_yticklabels([])
+    # ax.minorticks_off()
+    ax.tick_params(labelbottom=False, labelleft=False)
+    # ax.set_frame_on(False)
+    return ax
+
+def format_axes(fig):
+    for i, ax in enumerate(fig.axes):
+        ax.text(0.5, 0.5, "ax%d" % (i+1), va="center", ha="center")
+        ax.tick_params(labelbottom=False, labelleft=False)
