@@ -1,0 +1,10 @@
+*.py[cod]
+*.swap
+*.bak
+__pycache__/
+*.log
+.history/
+.venv/
+.env
+.DS_Store
+
