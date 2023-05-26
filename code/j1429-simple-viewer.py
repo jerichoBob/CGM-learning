@@ -1,4 +1,4 @@
-import layout_utils as lu
+import bobutils.layout_utils as lu
 
 import numpy as np
 import matplotlib.pyplot as plt
