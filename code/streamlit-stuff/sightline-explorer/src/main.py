@@ -1,10 +1,11 @@
 import streamlit as st
-import streamlit.components.v1 as components
+# import streamlit.components.v1 as components
 from streamlit_drawable_canvas import st_canvas
+from streamlit_image_coordinates import streamlit_image_coordinates
 
 import matplotlib
 import matplotlib.pyplot as plt
-from PIL import Image
+import pandas as pd
 import numpy as np
 import os
 
@@ -32,17 +33,12 @@ st.set_page_config(
 # variance_file = st.file_uploader("Upload variance data cube", type=['fits', 'fits.gz'])
 # to use this we would need to implement the streaming version of load_file found in kcwi_tools.
 # so we go basic
-# if flux_filename is None or var_filename is None:
-#     st.error('Please upload both the flux and variance files.')
-# if hdr is None or flux is None or var is None:
-#     st.error('Unable to load data from the uploaded files.')
 
-st.cache_data
+
+@st.cache_data
 def load_fits_files(flux_filename,var_filename):
     # load flux and variance fits file
     base_path = "/Users/robertseaton/Desktop/Physics-NCState/---Research/FITS-data/J1429/"
-    # flux_filename = base_path+"/J1429_rb_flux.fits"
-    # var_filename = base_path+"/J1429_rb_var.fits"
 
     hdr, flux = kcwi_io.open_kcwi_cube(base_path+flux_filename)
     wave = kcwi_u.build_wave(hdr)
@@ -52,70 +48,57 @@ def load_fits_files(flux_filename,var_filename):
 hdr, wave, flux, var = load_fits_files("J1429_rb_flux.fits","J1429_rb_var.fits")
 
 
-# print(wl_image)
-wl_image=build_whitelight(hdr, flux, minwave=4658, maxwave=4665)
-# utils.show_image_stats("BEFORE CORRECTIONS", wl_image)
-wl_image, wl_image_pil = utils.make_image_corrections(wl_image)
-# utils.show_image_stats("AFTER CORRECTIONS", wl_image)
+# print("-----")
+# image_width = hdr["NAXIS1"]
+# image_height = hdr["NAXIS2"]
+# print("w: ", image_width, " h: ", image_height)
+# for i in hdr:
+#     print(i,": ", hdr[i])
 
 # Create a figure and axes
-fig, ax = plt.subplots()
-ax.imshow(wl_image,interpolation="nearest",cmap="gray",vmin=0)
+# fig, ax = plt.subplots()
+# ax.imshow(wl_image,interpolation="nearest",cmap="gray",vmin=0)
+
+if 'sightline' not in st.session_state:
+    st.session_state.sightline = pd.DataFrame(columns=['x','y','SNR'])
+if 'spectra' not in st.session_state:
+    st.session_state.spectra = pd.DataFrame(columns=['Spectrum', 'SNR'])
 
 # how about a little layout
+brightness = st.sidebar.slider('Brightness', min_value=0.5, max_value=3.0, value=1.4, step=0.1)
+contrast   = st.sidebar.slider('Contrast',   min_value=0.5, max_value=3.0, value=1.4, step=0.1)
+sharpness  = st.sidebar.slider('Sharpness',  min_value=0.5, max_value=3.0, value=1.0, step=0.1)
+
 image_area, sightlines_area, spectrum_area = st.columns([2, 1, 2])
+image_scale = 6
 
 with image_area:
-   st.write("Flux")
-   st.pyplot(fig)
+    image_area.write("Flux")
+    band_width = 5
+    wavelength = image_area.slider('Center Wavelength:', 3500, 5500, 4666, label_visibility="collapsed")
+
+    wl_image_orig=build_whitelight(hdr, flux, minwave=wavelength - band_width, maxwave=wavelength + band_width)
+    # utils.show_image_stats("BEFORE CORRECTIONS", wl_image) 
+    wl_image = utils.make_image_corrections(wl_image_orig, contrast, brightness, sharpness, image_scale)
+    # utils.show_image_stats("AFTER CORRECTIONS", wl_image)
+
+   
+   #    image_area.pyplot(fig)
+    coords = streamlit_image_coordinates(wl_image)
+    if coords is not None:
+        image_area.write(coords)
+        st.session_state.sightline = utils.append_row(st.session_state.sightline, {'x': coords['x'],
+                                                                                   'y': coords['y'],
+                                                                                   'SNR': 0.00  })
+        print("just after adding a new entry: ", st.session_state.sightline)
 
 with sightlines_area:
-   st.write("Sightlines")
-   st.image("https://static.streamlit.io/examples/dog.jpg")
+    sightlines_area.write("Sightlines")
+    sightlines_area.table(st.session_state.sightline)
 
 with spectrum_area:
-   st.write("Spectra")
-   st.image("https://static.streamlit.io/examples/owl.jpg")
+    spectrum_area.write("Spectra")
+    spectrum_area.table(st.session_state.spectra)
 
 
 
-# Parameters for the interactive canvas
-stroke_width = 3
-stroke_color = "#ffffff"
-bg_color = "#000000"
-
-
-drawing_mode = st.sidebar.selectbox(
-    "Drawing tool:", ("point", "freedraw", "line", "rect", "circle", "transform")
-)
-stroke_width = st.sidebar.slider("Stroke width: ", 1, 25, 3)
-# if drawing_mode == 'point':
-#     point_display_radius = st.sidebar.slider("Point display radius: ", 1, 25, 3)
-stroke_color = st.sidebar.color_picker("Stroke color hex: ")
-bg_color = st.sidebar.color_picker("Background color hex: ", "#eee")
-bg_image = st.sidebar.file_uploader("Background image:", type=["png", "jpg"])
-realtime_update = st.sidebar.checkbox("Update in realtime", True)
-
-
-
-# Create the interactive canvas
-canvas_result = st_canvas(
-    fill_color="rgba(255, 165, 0, 0.3)",  # Fixed fill color with some opacity
-    stroke_width=stroke_width,
-    stroke_color=stroke_color,
-    background_color=bg_color,
-    background_image=wl_image_pil,
-    update_streamlit=realtime_update,
-    # height=200,
-    # width=200,
-    drawing_mode=drawing_mode,
-    key="canvas",
-)
-
-# Display the coordinates of the selected point
-if canvas_result.json_data is not None:
-    st.write("Objects created:")
-    st.json(canvas_result.json_data)
-
-    # for path in canvas_result.json_data["objects"]:
-    #     st.write(f"x: {path['left']}, y: {path['top']}")
