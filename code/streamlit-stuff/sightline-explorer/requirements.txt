@@ -1,2 +1,0 @@
-pip install streamlit-drawable-canvas #gotta use pip for this, no conda version
-conda install -c conda-forge mpld3

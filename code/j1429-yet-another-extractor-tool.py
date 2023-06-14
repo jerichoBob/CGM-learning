@@ -41,7 +41,7 @@ for i in range(len(points)):
     y = y_coords[i]
 
     outfile_name = spec_basename + str(x)+"."+str(y)+".fits"
-    # print("outfile_name: ",outfile_name)
+    print("outfile_name: ",outfile_name)
     # spectra.append(kcwi_s.extract_circle(x, y, wave, flux, var, radius, outfile=outfile_name))
     spectra.append(kcwi_s.extract_circle(x, y, wave, flux, var, radius))
 
