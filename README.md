@@ -1,11 +1,39 @@
 # CGM-learning
+
 A repo for my research on CGM (Circumgalactic Medium)
 
 I am beginning work with Rongmon Bordoloi's research group @ NC State.  This will be where I keep my notes. Will open it up if that seems appropriate.
 
+## First things first - Create your environment
+
+We use conda, so [install anaconda](https://docs.anaconda.com/free/anaconda/install/index.html) then open up the terminal of your choice (I prefer zsh inside a hyper terminal window)do the following
+
+```sh
+cd ~/School/github_repos # or wherever you have your local github repos
+
+# clone the needful
+git clone https://github.com/rongmon/rbcodes.git
+git clone https://github.com/pypeit/kcwitools.git
+git clone https://github.com/linetools/linetools.git
+```
+
+Install all the things ...
+
+```sh
+cd rbcodes; conda create --name astroresearch --file requirements_simple.txt
+conda activate astroresearch
+
+# and add these to fill in the gaps - don't know what I could do if online tools depend on these libraries... they need to be installable via pip/conda but aren't yet
+cd ~/School/github_repos/kcwitools/; python setup.py install
+cd ~/School/github_repos/linetools; python setup.py develop
+
+# now you can run the extraction tool, rbspecgui and Analyze-2.18133.py (which depends on astropy, kcwitools and linetools)
+```
+
 ## Useful Links
 
 * [rbcodes](https://github.com/rongmon/rbcodes) - various python tools for Rongmon's group
+* [linetools](https://github.com/linetools/linetools) - also [https://linetools.readthedocs.io/](https://linetools.readthedocs.io/)
 * [kcwitools](https://github.com/pypeit/kcwitools) - Tools for KCWI Reduction and Analysis
 * [astropy-learning](https://github.com/jerichoBob/astropy-learning) - my documentation on coming up to speed on astropy 
 
