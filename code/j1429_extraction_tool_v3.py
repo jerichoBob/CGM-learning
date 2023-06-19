@@ -141,13 +141,8 @@ for i in range(len(points)):
                ha='left', va='top',
                transform=ax_spectra[i].transAxes)   
 
-    # fspec.plot()
-    sp.write_to_fits(filepath)
-
-    # kcwi_s.extract_square(x, y, wave, flux, var, radius, outfile=outfile_name)
-    # spectra.append(kcwi_s.extract_circle(x, y, wave, flux, var, radius, outfile=outfile_name))
-    # spectra.append(kcwi_s.extract_circle(x, y, wave, flux, var, radius))
+    # sp.write_to_fits(filepath)
 
 
 plt.subplots_adjust(left=0.038, bottom=0.057, right=0.96, top=0.929, wspace=0.174, hspace=0.057)
-# plt.show()
+plt.show()
