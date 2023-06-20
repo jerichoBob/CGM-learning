@@ -1,0 +1,26 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"path": "../../../Desktop/Physics-NCState/---Research/FITS-data"
+		},
+		{
+			"path": "../kcwitools"
+		},
+		{
+			"path": "../linetools"
+		},
+		{
+			"path": "../rbcodes"
+		},
+		{
+			"path": "../sightline-explorer"
+		},
+		{
+			"path": "../../../Desktop/Physics-NCState/---Research"
+		}
+	],
+	"settings": {}
+}
