@@ -112,7 +112,7 @@ for i in range(len(points)):
     ax_image.text(x-1, y-1, str(i), color=color_sightline, 
                   fontsize = fig_size * 1.25, 
                   ha='center', va='center')
-    filename = f'1d_spectra_{x}.{y}-{sz}x{sz}-{co_begin}-{co_end}.fits'
+    filename = f'{i}_1d_spectra_{x}.{y}-{sz}x{sz}-{co_begin}-{co_end}.fits'
     filepath = output_path + filename
     print("file: ",filename)
 
