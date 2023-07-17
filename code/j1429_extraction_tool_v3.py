@@ -90,8 +90,6 @@ ax_image.imshow(whitelight/1e4, interpolation='nearest',cmap=plt.get_cmap('gray'
 
 
 
-spec_path = base_path+"/"
-
 font = {'family': 'serif',
         'color':  'darkred',
         'weight': 'normal',
@@ -101,6 +99,7 @@ color_sightline = 'r'
 color_error = 'gray'
 color_snr = 'k'
 
+output_path = "./analysis/j1429/"
 for i in range(len(points)):
     x = x_coords[i]
     y = y_coords[i]
@@ -114,14 +113,14 @@ for i in range(len(points)):
                   fontsize = fig_size * 1.25, 
                   ha='center', va='center')
     filename = f'1d_spectra_{x}.{y}-{sz}x{sz}-{co_begin}-{co_end}.fits'
-    filepath = spec_path + filename
+    filepath = output_path + filename
     print("file: ",filename)
 
     with warnings.catch_warnings():
         # Ignore model linearity warning from the fitter
         warnings.simplefilter('ignore')
         sp=ke.extract_weighted_spectrum(ff, vv, wave, weights='Data', verbose=False)
-        # sp=kcwi_s.extract_square(x, y, wave, flux, var, squaresize=5, outfile=None)
+        # sp=kcwi_s.extract_square(x, y, wave, flux, var, squaresize=sz, outfile=None)
 
 
         #plot the extracted spectrum before writing it out to file.
@@ -136,21 +135,26 @@ for i in range(len(points)):
                fontsize = 12, 
                ha='left', va='top',
                transform=ax_spectra[i].transAxes)
-    ax_spectra[i].text(0.05, 0.75, 
+    ax_spectra[i].text(0.05, 0.8, 
                "SNR: "+str(snr),
                color=color_snr, 
                fontsize = 12, 
                ha='left', va='top',
                transform=ax_spectra[i].transAxes)    
-    ax_spectra[i].text(0.05, 0.6, 
-               f'({x},{y})',
+    ax_spectra[i].text(0.05, 0.7, 
+               f'Coord: ({x},{y})',
                color=color_snr, 
-               fontsize = 10, 
+               fontsize = 12, 
                ha='left', va='top',
                transform=ax_spectra[i].transAxes)   
+    ax_spectra[i].text(0.05, 0.6, 
+               f'Aperture: {sz} x {sz}',
+               color=color_snr, 
+               fontsize = 12, 
+               ha='left', va='top',
+               transform=ax_spectra[i].transAxes)  
+    sp.write_to_fits(filepath)
 
-    # sp.write_to_fits(filepath)
 
-
-plt.subplots_adjust(left=0.038, bottom=0.057, right=0.96, top=0.929, wspace=0.174, hspace=0.057)
+plt.subplots_adjust(left=0.038, bottom=0.057, right=0.96, top=0.929, wspace=0.174, hspace=0.041)
 plt.show()
