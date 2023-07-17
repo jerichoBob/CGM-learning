@@ -27,7 +27,7 @@ def plotcircle(plt, x, y, labels, sz, c):
 
 
 def corrected_corner_define(xx, yy, flux, var, deltax=5, deltay=5):
-# variation of Rongmon's Extract_1D_Spectra_J2222
+# corrected variation of Rongmon's "corner_define" function in Extract_1D_Spectra_J2222.ipynb
     x_halfbox = (deltax-1)//2
     y_halfbox= (deltay-1)//2
 
@@ -56,8 +56,7 @@ def signal_to_noise(wave, flux, co_begin=3500, co_end=5500):
     Continuum range is inclusive of the endpoints
     this generally assumes that we are working with a subset or window of the flux produced by 'corrected_corner_define()'
     '''
-    # co_range = (3500, 5500)
-
+    
     # Select the data within this range
     wave_min = co_begin * u.AA  # Adjust unit as per your data
     wave_max = co_end * u.AA  # Adjust unit as per your data

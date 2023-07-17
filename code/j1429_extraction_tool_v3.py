@@ -19,26 +19,29 @@ import warnings
 # SNR was waaay too low for a 3x3 (mostly less than 1) when treating 3700-5500 as the continuum
 sz = 3  # length of one side of the square box
 points = [
-    (29,36), #0
-    (29,39),    
-    (32,37),
-    (32,40),
-    (35,38),
-    (35,41),
-    (38,38), 
-    (38,41), 
+    (29,36,3), #0
+    (29,39,3),    
+    (32,37,3),
+    (32,40,3),
+    (35,39,3),
+    # (35,41,3),
+    (38,39,3), 
+    # (38,41,3), 
 
-    (49,31),
-    (49,34),
-    (52,31),
+    # (49,31,3),
+    # (49,34,3),
+    # (52,31,3),
 
-    (35,24),
+    (50,33,7),
+    
+    (35,24,7),
 ]
 
-x_coords, y_coords = zip(*points)
+x_coords, y_coords, sizes = zip(*points)
 # convert to lists
 x_coords = list(x_coords)
 y_coords = list(y_coords)
+sizes    = list(sizes)
 
 base_path = "/Users/robertseaton/Desktop/Physics-NCState/---Research/Analysis/J1429"
 flux_filename = base_path+"/J1429_rb_flux.fits"
@@ -51,27 +54,30 @@ hdr, flux = kcwi_io.open_kcwi_cube(flux_filename)
 # first do a little data cleanup
 var[np.isnan(flux)]=1.
 flux[np.isnan(flux)]=0.0000
-header =kp.tweak_header(deepcopy(hdr))
+header =kp.tweak_header(deepcopy(hdr)) #why do this if it is never used?
 
 wave = kcwi_u.build_wave(hdr) # should I be using header instead of hdr??
 
-# First create a white light image to plot
-wl_center = 4686
-wl_halfwidth  = 10
-whitelight= im.build_whitelight(hdr, flux, minwave=wl_center - wl_halfwidth, maxwave=wl_center + wl_halfwidth)
+# First create a narrow-band whitelight image to plot
+narrowband_center = 4686
+del_lambda  = 10
+whitelight= im.build_whitelight(hdr, flux, minwave=narrowband_center - del_lambda, maxwave=narrowband_center + del_lambda)
 
 
 
-fig_size=10
+fig_size=8
 
-fig = plt.figure(figsize=(18, 12))
+fig = plt.figure(figsize=(18, 10))
+# plt.rcParams['text.usetex'] = True
+# plt.rcParams['font.family'] = 'serif'
 # ax = fig.add_subplot(111)
 ax_info, ax_image, ax_spectra = lu.make_image_and_12_plots(plt)
 
-co_begin=4750
-co_end=5500
+# the continuum, place in a rlatively stable region of the spectra
+co_begin=4864
+co_end=4914
 
-info_str = f'J1429 analysis metadata\n\nContinuum Start: {co_begin}\nContinuum Stop: {co_end}\nAperture Size: {sz}x{sz}'
+info_str = f'J1429 Analysis Metadata\n\nContinuum: {co_begin} - {co_end}\nAperture Size: Position Dependent\nNarrowband Center: {narrowband_center} +/- {del_lambda} Angstroms\n\n'
 
 ax_info.text(0.05, 0.9, 
              info_str,
@@ -98,6 +104,7 @@ color_snr = 'k'
 for i in range(len(points)):
     x = x_coords[i]
     y = y_coords[i]
+    sz = sizes[i]
     # print("center: (", x,",",y,")")
     xx_A, yy_A, ff, vv = bu.corrected_corner_define(x, y, flux, var, deltax=sz, deltay=sz)
 
@@ -109,12 +116,13 @@ for i in range(len(points)):
     filename = f'1d_spectra_{x}.{y}-{sz}x{sz}-{co_begin}-{co_end}.fits'
     filepath = spec_path + filename
     print("file: ",filename)
-    # print(filepath)
 
     with warnings.catch_warnings():
         # Ignore model linearity warning from the fitter
         warnings.simplefilter('ignore')
         sp=ke.extract_weighted_spectrum(ff, vv, wave, weights='Data', verbose=False)
+        # sp=kcwi_s.extract_square(x, y, wave, flux, var, squaresize=5, outfile=None)
+
 
         #plot the extracted spectrum before writing it out to file.
     ax_spectra[i].plot(sp.wavelength, sp.flux, '-', color=color_sightline)

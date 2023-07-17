@@ -137,14 +137,14 @@ def make_simple_image_flux_var_layout(plt, image_size=6):
     return ax
 
 def make_image_and_12_plots(plt):
-    gs = gridspec.GridSpec(6, 3)
+    gs = gridspec.GridSpec(4, 3)
     # Create a subplot for the image on the left
     ax_text = plt.subplot(gs[0:1, :1]) # text box
     ax_text = clear_axes(ax_text)
     ax_image = plt.subplot(gs[1:5, :1])
 
     # Create 12 subplots on the right for the spectra
-    ax_spectra = [plt.subplot(gs[i // 2, i % 2 + 1]) for i in range(12)]
+    ax_spectra = [plt.subplot(gs[i // 2, i % 2 + 1]) for i in range(8)]
 
     plt.tight_layout()
     return ax_text, ax_image, ax_spectra
