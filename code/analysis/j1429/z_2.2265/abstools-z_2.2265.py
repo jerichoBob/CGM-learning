@@ -16,19 +16,25 @@ wave=a[2].data
 
 #------------------------------
 #Specify redshift at which to perform analysis
-# z=2.18025 # Rongmon's value
-z=2.18110 # Seems a better fit for Si_III, Si_II_2 & C_IV
+# Rongmon's value: z = 2.22245 
+# z=2.2238
+z= 2.2265
 
 # Give approximate absorption line rest frame wavelengths to be analyzed
-Si_II_1 = np.array([ 1190.4158, 1193.2897 ]) # ???
-Si_III  = np.array([ 1206.500 ])
-N_V     = np.array([ 1238.821, 1242.804 ])
-Si_II_2 = np.array([ 1526.70698 ])
-C_IV    = np.array([ 1548.2049, 1550.77845 ])
-Fe_II   = np.array([ 1608.45085 ]) # ??
-Al_II   = np.array([ 1670.7886 ]) # ??
+D_I   = np.array([ 1215.3394 ]) # PERFECT
+H_I   = np.array([ 1215.6701 ]) # OK
 
-lines = np.concatenate((Si_II_1, Si_III, N_V, Si_II_2, C_IV, Fe_II, Al_II)).tolist()
+Si_II_1 = np.array([ 1264.7377 ]) # PERFECT -- actually it's Si_II*
+
+N_V     = np.array([ 1242.804 ]) # OK, but shouldn't this be a doublet?
+O_I     = np.array([ 1302.1685 ]) # OK? 
+Si_II_2 = np.array([ 1304.3702 ]) # PERFECT 
+
+Si_II_3 = np.array([ 1526.70698 ]) # PERFECT
+C_IV    = np.array([ 1548.2049, 1550.77845 ]) # PERFECT, but weak
+
+
+lines = np.concatenate((D_I, H_I, Si_II_1, N_V, O_I, Si_II_2, Si_II_3, C_IV)).tolist()
 
 # Create an absorber class to feed into the main GUI
 absys=A.Absorber(z,wave,flux,error,lines=lines, window_lim=[-2000,2000])   

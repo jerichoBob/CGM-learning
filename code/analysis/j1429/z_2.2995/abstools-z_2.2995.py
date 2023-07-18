@@ -16,19 +16,25 @@ wave=a[2].data
 
 #------------------------------
 #Specify redshift at which to perform analysis
-# z=2.18025 # Rongmon's value
-z=2.18110 # Seems a better fit for Si_III, Si_II_2 & C_IV
+# z = 2.29849 # Rongmon's value
+z=2.2995 # Seems a better fit for Si_III, Si_II_2 & C_IV
 
 # Give approximate absorption line rest frame wavelengths to be analyzed
+
 Si_II_1 = np.array([ 1190.4158, 1193.2897 ]) # ???
 Si_III  = np.array([ 1206.500 ])
-N_V     = np.array([ 1238.821, 1242.804 ])
-Si_II_2 = np.array([ 1526.70698 ])
-C_IV    = np.array([ 1548.2049, 1550.77845 ])
-Fe_II   = np.array([ 1608.45085 ]) # ??
-Al_II   = np.array([ 1670.7886 ]) # ??
 
-lines = np.concatenate((Si_II_1, Si_III, N_V, Si_II_2, C_IV, Fe_II, Al_II)).tolist()
+D_I   = np.array([ 1215.3394 ]) # OK
+H_I   = np.array([ 1215.6701 ]) # OK
+
+N_V     = np.array([ 1238.821, 1242.804 ]) # PERFECT
+
+Si_II_2 = np.array([ 1260.4221 ]) # ok @ z=2.2995, but missing doublet  1264
+
+C_IV    = np.array([ 1548.2049, 1550.77845 ]) # PERFECT, but 1548 shares the bed with another absorption line
+
+
+lines = np.concatenate((Si_II_1, Si_III, D_I, H_I, N_V, Si_II_2, C_IV)).tolist()
 
 # Create an absorber class to feed into the main GUI
 absys=A.Absorber(z,wave,flux,error,lines=lines, window_lim=[-2000,2000])   
