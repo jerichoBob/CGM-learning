@@ -20,7 +20,7 @@ wave=a[2].data
 z=2.1812 # Seems a better fit for Si_III, Si_II_2 & C_IV
 
 # Give approximate absorption line rest frame wavelengths to be analyzed
-Fe_II   = np.array([ 1144.9379 ]) # ok @ z=2.1812
+Fe_II_1 = np.array([ 1144.9379 ]) # ok @ z=2.1812
 Si_II_1 = np.array([ 1190.4158, 1193.2897 ]) # 1190 ok and 1193 perfect @ z=2.1812
 Si_III  = np.array([ 1206.500 ]) # perfect @ z=2.1812
 N_V     = np.array([ 1238.821, 1242.804 ]) # 1238 perfect, 1242 ok @ z=2.1812
@@ -34,14 +34,15 @@ Si_IV   = np.array([ 1393.76018 ]) # ok @ z=2.1812
 
 Si_II_4 = np.array([ 1526.70698 ]) # perfect @ z=2.1812
 C_IV    = np.array([ 1548.2049, 1550.77845 ]) # perfect @ z=2.1812
-Fe_II   = np.array([ 1608.45085 ]) # perfect @ z=2.1812
+Fe_II_2 = np.array([ 1608.45085 ]) # perfect @ z=2.1812
 Al_II   = np.array([ 1670.7886 ]) # ok @ z=2.1812
 
 # lines = np.concatenate((Fe_II, Si_II_1, Si_III, N_V, Si_II_2, C_IV, Fe_II, Al_II)).tolist()
-lines = np.concatenate((Fe_II, Si_II_1, Si_III, N_V,   Si_II_2, O_I, Si_II_3, C_II, Si_IV,    Si_II_4, C_IV, Fe_II, Al_II)).tolist()
+# lines = np.concatenate((Fe_II_1, Si_II_1, Si_III, N_V, Si_II_2, O_I, Si_II_3, C_II, Si_IV,    Si_II_4, C_IV, Fe_II_2, Al_II)).tolist() - won't allow more than 12 absorbers 
+lines = np.concatenate((Si_II_1, Si_III, N_V,  O_I, Si_II_3, Si_II_4, C_IV, Fe_II_2)).tolist()
 
 # Create an absorber class to feed into the main GUI
-absys=A.Absorber(z,wave,flux,error,lines=lines, window_lim=[-2000,2000])   
+absys=A.Absorber(z,wave,flux,error,lines=lines, window_lim=[-2000,2000],load_file=True)   
 Abs=absys.ions
 
 #Run the main GUI
