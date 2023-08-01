@@ -31,9 +31,11 @@ Si_II_2 = np.array([ 1304.3702 ]) # PERFECT
 
 
 lines = np.concatenate((N_I, D_I, H_I, Si_II_1, Si_II_2)).tolist()
-
+for line in lines:
+    print(f"line: {line}    -- type: {type(line)}")
 # Create an absorber class to feed into the main GUI
-absys=A.Absorber(z,wave,flux,error,lines=lines, window_lim=[-2000,2000])   
+print(f"A.Absorber(z={z}, wave={wave}, flux={flux}, error={error}, lines={lines}, window_lim={[-2000,2000]})")
+absys=A.Absorber(z=z,wave=wave,flux=flux,error=error,lines=lines, window_lim=[-2000,2000])   
 Abs=absys.ions
 
 #Run the main GUI
