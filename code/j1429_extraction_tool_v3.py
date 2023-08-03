@@ -95,8 +95,8 @@ font = {'family': 'serif',
         'weight': 'normal',
         'size': 14,
         }
-color_sightline = 'r'
-color_error = 'gray'
+color_sightline = 'yellow'
+color_error = 'red'
 color_snr = 'k'
 
 output_path = "./analysis/j1429/"
@@ -108,7 +108,7 @@ for i in range(len(points)):
     xx_A, yy_A, ff, vv = bu.corrected_corner_define(x, y, flux, var, deltax=sz, deltay=sz)
 
     # the bounding box and text label on the image
-    ax_image.plot(xx_A, yy_A, color=color_sightline, linewidth=0.75)
+    ax_image.plot(xx_A, yy_A, color=color_sightline, linewidth=1)
     ax_image.text(x-1, y-1, str(i), color=color_sightline, 
                   fontsize = fig_size * 1.25, 
                   ha='center', va='center')
@@ -153,7 +153,8 @@ for i in range(len(points)):
                fontsize = 12, 
                ha='left', va='top',
                transform=ax_spectra[i].transAxes)  
-    sp.write_to_fits(filepath)
+    ax_spectra[i].set_facecolor('darkgrey')
+    # sp.write_to_fits(filepath)
 
 
 plt.subplots_adjust(left=0.038, bottom=0.057, right=0.96, top=0.929, wspace=0.174, hspace=0.041)
