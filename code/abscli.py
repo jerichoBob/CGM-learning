@@ -76,10 +76,16 @@ def main():
         print(". "*60)
 
 parser = argparse.ArgumentParser(
-                    prog='abstools.py',
+                    prog='abscli.py',
+                    formatter_class=argparse.RawDescriptionHelpFormatter,
                     description="""
 This wrapper around abstools takes the output of rbspecgui.py (LineList_Identified.txt) and 
 creates a stack plot of the absorbers at specific redshifts.
+
+Example usage:
+    python abscli.py -s <specdir> -l - to get a list of the available redshifts
+    python abscli.py -s <specdir> -z <redshift> - to create a stack plot of the absorbers at the specified redshift
+
 """, 
                     epilog='----')
 parser.add_argument('-s', '--specdir', required=True, help='the directory containing the 1d spectra & LineList_Identified.txt')
