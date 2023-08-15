@@ -7,6 +7,7 @@
 from astropy.io import fits
 from GUIs.abstools import Absorber as A
 from GUIs.abstools import Metal_Plot as M   
+import pickle
 import numpy as np
 import csv
 import pandas as pd
@@ -91,14 +92,22 @@ This wrapper around abstools takes the output of rbspecgui.py (LineList_Identifi
 creates a stack plot of the absorbers at specific redshifts.
 
 Example usage:
-    python abscli.py -s <specdir> -l - to get a list of the available redshifts
-    python abscli.py -s <specdir> -z <redshift> - to create a stack plot of the absorbers at the specified redshift
+    python abscli.py -s <specdir> -l               ::: print a list of the available redshifts
+    >>> Available redshifts: ['2.1812', '2.2265', '2.2995', '2.3842', '2.3852']
+
+    python abscli.py -s <specdir> -z <redshift>    ::: create a stack plot of the absorbers at the specified redshift
+    >>> z: 2.2265  lines: [1206.5, 1215.6701, 1242.804, 1302.1685, 1304.3702, 1526.7066] & then presents the GUI
+
+    python abscli.py -s <specdir> -z <redshift> -p ::: display a previously saved stack plot of the absorbers at the specified redshift
+    >>> 
 
 """, 
-                    epilog='----')
+                    # epilog='----'
+                    )
 parser.add_argument('-s', '--specdir', required=True, help='the directory containing the 1d spectra & LineList_Identified.txt')
 parser.add_argument('-l', '--list',     action='store_true', help='list the available redshifts')
 parser.add_argument('-z', '--redshift', help='the redshift to analyze')
+parser.add_argument('-p', '--pickle', action='store_true', help='used with --specdir and --redshift; load pickle file from redshift directory')
 
 if __name__ == "__main__":
 
@@ -106,44 +115,55 @@ if __name__ == "__main__":
     if args.specdir is None:
         parser.print_help(sys.stderr)
         sys.exit(1)
-
-    if args.specdir:
+    else:
         specdir = args.specdir
         redshifts = read_linelist(specdir)
 
-    if args.redshift:
-        # assumes that the specdir has already been set
-        wave, flux, error = read_spec(specdir)
+    if args.specdir and args.redshift:
         z = float(args.redshift)
         line_list = redshifts[str(z)]
-        lines = []
-        for el in line_list:
-            ion = el["ion"]
-            obs = el["observed"]
-            line = get_rest_wavelength(ion, obs, z)
-            lines.append(bu.sig_figs(float(line),8))
+        basedir = os.path.join(specdir, 'z_' + str(z))
 
-        z = float(z)
-        lines = sorted(lines)
-        last_12_lines = lines[-12:]
-        print(f"z: {z}  lines: {last_12_lines}")
-        try:
-            absys=A.Absorber(z=z,wave=wave,flux=flux,error=error,lines=last_12_lines, window_lim=[-2000,2000])  
-            ions=absys.ions
-            basedir = os.path.join(specdir, 'z_' + str(z))
-            # print(f"basedir: {basedir}")
-            if not os.path.exists(basedir): os.makedirs(basedir)
+        if not os.path.exists(basedir): os.makedirs(basedir)
 
-            M.Transitions(ions, basedir=basedir)
-        except Exception as e:
-            print(f"Exception: {e}")
+        if args.pickle == False:
+            wave, flux, error = read_spec(specdir)
+            lines = []
+            for el in line_list:
+                ion = el["ion"]
+                obs = el["observed"]
+                line = get_rest_wavelength(ion, obs, z)
+                lines.append(bu.sig_figs(float(line),8))
 
-    if args.list:
+            lines = sorted(lines)
+            last_12_lines = lines[-12:]
+            print(f"z: {z}  lines: {last_12_lines}")
+            try:
+                absys=A.Absorber(z=z,wave=wave,flux=flux,error=error,lines=last_12_lines, window_lim=[-2000,2000])  
+                ions=absys.ions
+
+                M.Transitions(ions, basedir=basedir)
+            except Exception as e:
+                print(f"Exception: {e}")
+        else:  # args.pickle == True
+            # pfile='Spectrum_Analysis_z_0.017.p'
+            pfile = basedir + '/' + "Spectrum_Analysis_z_" + str(z) + ".p"
+            # print(f"pfile: {pfile}")
+            if not os.path.exists(pfile): 
+                print(f"\nERROR: pickle file {pfile} does not exist!\n")
+                sys.exit(-1)
+
+            with open(pfile,'rb') as pklfile: absys=pickle.load(pklfile)
+            M.Transitions(absys)
+
+
+    if args.specdir and args.list:
         # assumes that the specdir has already been set
         print(f"Available redshifts: {list(redshifts.keys())}") 
 
-    if args.redshift == None and args.list == None:
+    if args.redshift == None and args.list == None and args.pickle == None:
         parser.print_help(sys.stderr)
         sys.exit(1)
+
 
     # main()
