@@ -17,7 +17,7 @@ import argparse
 analysisdir = './analysis/j1429'
 
 def read_linelist(specdir):
-    linelist_file = specdir + '/SpecPlot_Projects/Identified_LineList.txt'
+    linelist_file = os.path.join(specdir,'Identified_LineList.txt')
     reader = csv.reader(open(linelist_file), delimiter=" ")
     redshifts = {}
     next(reader) # skip header
@@ -131,7 +131,9 @@ if __name__ == "__main__":
             absys=A.Absorber(z=z,wave=wave,flux=flux,error=error,lines=last_12_lines, window_lim=[-2000,2000])  
             ions=absys.ions
             basedir = os.path.join(specdir, 'z_' + str(z))
-            print(f"basedir: {basedir}")
+            # print(f"basedir: {basedir}")
+            if not os.path.exists(basedir): os.makedirs(basedir)
+
             M.Transitions(ions, basedir=basedir)
         except Exception as e:
             print(f"Exception: {e}")
@@ -139,5 +141,9 @@ if __name__ == "__main__":
     if args.list:
         # assumes that the specdir has already been set
         print(f"Available redshifts: {list(redshifts.keys())}") 
+
+    if args.redshift == None and args.list == None:
+        parser.print_help(sys.stderr)
+        sys.exit(1)
 
     # main()
