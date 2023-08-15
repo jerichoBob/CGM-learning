@@ -6,7 +6,31 @@ I am beginning work with Rongmon Bordoloi's research group @ NC State.  This wil
 
 ## First things first - Create your environment
 
-We use conda, so [install anaconda](https://docs.anaconda.com/free/anaconda/install/index.html) then open up the terminal of your choice (I prefer zsh inside a hyper terminal window)do the following
+We use conda, so install miniconda by opening up the terminal of your choice do the following:
+
+```sh
+# Download the things
+wget https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-MacOSX-arm64.sh
+bash Miniforge3-MacOSX-arm64.sh
+
+# make sure that "our" conda is active when a new shell starts up
+~/miniforge3/bin/conda config --set auto_activate_base true
+
+# create the environment
+conda create -n astroresearch python=3.9.5
+
+# activate the environment
+conda activate astroresearch
+```
+
+<!-- I have switch allegences from conda over to simple venv (built into python distro) to minimize the number of competing environments I have on my machine.
+
+```sh
+python3 -m venv ~/venvs/astroresearch
+source ~/venvs/astroresearch/bin/activate
+``` -->
+
+Next, download the things (if you haven't done that already)
 
 ```sh
 cd ~/School/github_repos # or wherever you have your local github repos
@@ -17,11 +41,10 @@ git clone https://github.com/pypeit/kcwitools.git
 git clone https://github.com/linetools/linetools.git
 ```
 
-Install all the things ...
+And finally, install all the things ...
 
 ```sh
-cd rbcodes; conda create --name astroresearch --file requirements_simple.txt
-conda activate astroresearch
+cd  ~/School/github_repos/rbcodes; pip install -r requirements_simple.txt
 
 # and add these to fill in the gaps - don't know what I could do if online tools depend on these libraries... they need to be installable via pip/conda but aren't yet
 cd ~/School/github_repos/kcwitools/; python setup.py install

@@ -1,5 +1,8 @@
 # A "generic" version of abstools that can read in a line list (absorbers at specific redshifts) 
 # from rbspecgui and display the stack plots for the absorbers.
+# make sure you first establish your own venv like this:
+#   python3 -m venv astroresearch
+#   source astroresearch/bin/activate
 
 from astropy.io import fits
 from GUIs.abstools import Absorber as A
@@ -26,7 +29,12 @@ def read_linelist(specdir):
     return redshifts
 
 def read_spec(specdir):
-    spec_filename = specdir + '/7_1d_spectra_35.24-7x7-4864-4914.fits'
+    # print(f"specdir: {specdir}")
+    elements = os.path.split(specdir)
+    fits_filename = elements[-1] + '.fits'
+    # print(f"last element: {elements[-1]}")
+
+    spec_filename = os.path.join(specdir, fits_filename)
     a=fits.open(spec_filename)
 
     flux=a[0].data
