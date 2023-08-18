@@ -17,7 +17,7 @@ import argparse
 
 analysisdir = './analysis/j1429'
 
-def read_linelist(specdir):
+def get_redshifts(specdir):
     linelist_file = os.path.join(specdir,'Identified_LineList.txt')
     reader = csv.reader(open(linelist_file), delimiter=" ")
     redshifts = {}
@@ -51,8 +51,51 @@ def get_rest_wavelength(ion, wave_obs, redshift):
     # print(f"lamda_rest: {lambda_rest} ion: {ion} wave_obs: {wave_obs} redshift: {redshift}")
     return lambda_rest
 
-# print("-"*60)
-def main():
+def load_transitions_from_pickle(basedir, z):
+    pfile = basedir + '/' + "Spectrum_Analysis_z_" + str(z) + ".p"
+    # print(f"pfile: {pfile}")
+    if not os.path.exists(pfile): 
+        print(f"\nERROR: pickle file {pfile} does not exist!\n")
+        sys.exit(-1)
+
+    with open(pfile,'rb') as pklfile: absys=pickle.load(pklfile)
+    M.Transitions(absys, basedir=basedir)
+
+
+def load_transitions_from_scratch(specdir, basedir, z):
+    wave, flux, error = read_spec(specdir)
+    line_list = redshifts[str(z)]
+
+    lines = []
+    for el in line_list:
+        ion = el["ion"]
+        obs = el["observed"]
+        line = get_rest_wavelength(ion, obs, z)
+        lines.append(bu.sig_figs(float(line),8))
+
+    lines = sorted(lines)
+    last_12_lines = lines[-12:]
+    print(f"z: {z}  lines: {last_12_lines}")
+    try:
+        absys=A.Absorber(z=z,wave=wave,flux=flux,error=error,lines=last_12_lines, window_lim=[-2000,2000])  
+        ions=absys.ions
+
+        M.Transitions(ions, basedir=basedir)
+    except Exception as e:
+        print(f"Exception: {e}")
+
+def process_transitions(specdir, z, use_pickle = False):
+
+    basedir = os.path.join(specdir, 'z_' + str(z))
+    if not os.path.exists(basedir): os.makedirs(basedir)
+
+    if use_pickle:
+        load_transitions_from_pickle(basedir, z)
+    else:
+        load_transitions_from_scratch(specdir, basedir, z)
+
+
+def main_unused():
     for redshift, line_list in redshifts.items():
         lines = []
         for el in line_list:
@@ -107,7 +150,9 @@ Example usage:
 parser.add_argument('-s', '--specdir', required=True, help='the directory containing the 1d spectra & LineList_Identified.txt')
 parser.add_argument('-l', '--list',     action='store_true', help='list the available redshifts')
 parser.add_argument('-z', '--redshift', help='the redshift to analyze')
+parser.add_argument('-a', '--all', action='store_true', help='EXPERIMENTAL: loop over all redshifts and create stack plots for each one')
 parser.add_argument('-p', '--pickle', action='store_true', help='used with --specdir and --redshift; load pickle file from redshift directory')
+parser.add_argument('-n', '--next', action='store_true', help='used with --specdir and --redshift; load up the next redshift that has not yet been analyzed (no pickle file yet)')
 
 if __name__ == "__main__":
 
@@ -117,45 +162,19 @@ if __name__ == "__main__":
         sys.exit(1)
     else:
         specdir = args.specdir
-        redshifts = read_linelist(specdir)
+        redshifts = get_redshifts(specdir)
 
     if args.specdir and args.redshift:
         z = float(args.redshift)
-        line_list = redshifts[str(z)]
-        basedir = os.path.join(specdir, 'z_' + str(z))
+        process_transitions(specdir, z, args.pickle)
 
-        if not os.path.exists(basedir): os.makedirs(basedir)
-
-        if args.pickle == False:
-            wave, flux, error = read_spec(specdir)
-            lines = []
-            for el in line_list:
-                ion = el["ion"]
-                obs = el["observed"]
-                line = get_rest_wavelength(ion, obs, z)
-                lines.append(bu.sig_figs(float(line),8))
-
-            lines = sorted(lines)
-            last_12_lines = lines[-12:]
-            print(f"z: {z}  lines: {last_12_lines}")
-            try:
-                absys=A.Absorber(z=z,wave=wave,flux=flux,error=error,lines=last_12_lines, window_lim=[-2000,2000])  
-                ions=absys.ions
-
-                M.Transitions(ions, basedir=basedir)
-            except Exception as e:
-                print(f"Exception: {e}")
-        else:  # args.pickle == True
-            # pfile='Spectrum_Analysis_z_0.017.p'
-            pfile = basedir + '/' + "Spectrum_Analysis_z_" + str(z) + ".p"
-            # print(f"pfile: {pfile}")
-            if not os.path.exists(pfile): 
-                print(f"\nERROR: pickle file {pfile} does not exist!\n")
-                sys.exit(-1)
-
-            with open(pfile,'rb') as pklfile: absys=pickle.load(pklfile)
-            M.Transitions(absys)
-
+    if args.specdir and args.all:
+        for redshift in redshifts.keys():
+            # print(f"z: {z}")
+            # basedir = os.path.join(specdir, 'z_' + str(z))
+            # print(f"basedir: {basedir}")
+            z = float(redshift)
+            process_transitions(specdir, z, args.pickle)
 
     if args.specdir and args.list:
         # assumes that the specdir has already been set

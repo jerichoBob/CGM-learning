@@ -22,5 +22,7 @@
 			"path": "../../../Desktop/Physics-NCState/---Research"
 		}
 	],
-	"settings": {}
+	"settings": {
+		"powershell.cwd": "/Users/robertseaton/School/github_repos/CGM-learning"
+	}
 }
