@@ -17,7 +17,7 @@ from bobutils import utils as bu
 
 def find_pdfs(basedir):
     return (os.path.join(root, file)
-            for root, dirs, files in os.walk(basedir)
+        for root, dirs, files in os.walk(basedir)
             for file in files if file.lower().endswith('.pdf'))
 
 def print_list(list):
