@@ -1,0 +1,18 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Python: Debug abscli.py",
+            "type": "python",
+            "request": "launch",
+            // "program": "${file}",
+            "program": "${workspaceFolder}/code/abscli.py",
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "args": ["-s", "code/analysis/j1429/4_1d_spectra_35.39-3x3-4864-4914", "-z", "2.1812"]
+        }
+    ]
+}

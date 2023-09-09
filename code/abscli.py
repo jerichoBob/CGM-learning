@@ -17,7 +17,8 @@ import argparse
 
 analysisdir = './analysis/j1429'
 
-def get_redshifts(specdir):
+def get_ion_redshifts(specdir):
+    """ Creates a redshifts dictionary, indexed by a specific redshift, and contains the ions (and their observed wavelength) at that redshift"""
     linelist_file = os.path.join(specdir,'Identified_LineList.txt')
     reader = csv.reader(open(linelist_file), delimiter=" ")
     redshifts = {}
@@ -74,10 +75,10 @@ def load_transitions_from_scratch(specdir, basedir, z):
         lines.append(bu.sig_figs(float(line),8))
 
     lines = sorted(lines)
-    last_12_lines = lines[-12:]
-    print(f"z: {z}  lines: {last_12_lines}")
+    # last_12_lines = lines[-12:] # have to do this because Metal_Plot.Transitions() can only take up to 12 lines
+    print(f"z: {z}  lines: {lines}")
     try:
-        absys=A.Absorber(z=z,wave=wave,flux=flux,error=error,lines=last_12_lines, window_lim=[-2000,2000])  
+        absys=A.Absorber(z=z,wave=wave,flux=flux,error=error,lines=lines, window_lim=[-2000,2000])  
         ions=absys.ions
 
         M.Transitions(ions, basedir=basedir)
@@ -148,21 +149,23 @@ Example usage:
                     # epilog='----'
                     )
 parser.add_argument('-s', '--specdir', required=True, help='the directory containing the 1d spectra & LineList_Identified.txt')
-parser.add_argument('-l', '--list',     action='store_true', help='list the available redshifts')
+parser.add_argument('-l', '--list', action='store_true', help='list the available redshifts')
 parser.add_argument('-z', '--redshift', help='the redshift to analyze')
 parser.add_argument('-a', '--all', action='store_true', help='EXPERIMENTAL: loop over all redshifts and create stack plots for each one')
 parser.add_argument('-p', '--pickle', action='store_true', help='used with --specdir and --redshift; load pickle file from redshift directory')
-parser.add_argument('-n', '--next', action='store_true', help='used with --specdir and --redshift; load up the next redshift that has not yet been analyzed (no pickle file yet)')
+# parser.add_argument('-n', '--next', action='store_true', help='used with --specdir and --redshift; load up the next redshift that has not yet been analyzed (no pickle file yet)')
 
 if __name__ == "__main__":
 
     args = parser.parse_args()
+    # print(f"args.specdir: {args.specdir} args.list: {args.list}  args.pickle: {args.pickle}  args.all: {args.all}")
+
     if args.specdir is None:
         parser.print_help(sys.stderr)
         sys.exit(1)
     else:
         specdir = args.specdir
-        redshifts = get_redshifts(specdir)
+        redshifts = get_ion_redshifts(specdir)
 
     if args.specdir and args.redshift:
         z = float(args.redshift)
@@ -171,14 +174,16 @@ if __name__ == "__main__":
     if args.specdir and args.all:
         for redshift in redshifts.keys():
             # print(f"z: {z}")
-            # basedir = os.path.join(specdir, 'z_' + str(z))
+            # basedir = os.path.join(specdir, 'z_' + str(redshift))
             # print(f"basedir: {basedir}")
             z = float(redshift)
-            process_transitions(specdir, z, args.pickle)
+            print(f"process_transitions(specdir={specdir}, z={z}, use_pickle={args.all})")
 
     if args.specdir and args.list:
         # assumes that the specdir has already been set
-        print(f"Available redshifts: {list(redshifts.keys())}") 
+        # print(f"Available redshifts: {list(redshifts.keys())}") 
+        for z in redshifts.keys():
+            print(f"z: {z}  lines: {len(redshifts[z])}")
 
     if args.redshift == None and args.list == None and args.pickle == None:
         parser.print_help(sys.stderr)
