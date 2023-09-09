@@ -75,7 +75,6 @@ def load_transitions_from_scratch(specdir, basedir, z):
         lines.append(bu.sig_figs(float(line),8))
 
     lines = sorted(lines)
-    # last_12_lines = lines[-12:] # have to do this because Metal_Plot.Transitions() can only take up to 12 lines
     print(f"z: {z}  lines: {lines}")
     try:
         absys=A.Absorber(z=z,wave=wave,flux=flux,error=error,lines=lines, window_lim=[-2000,2000])  
