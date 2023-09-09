@@ -1,5 +1,5 @@
-from PyPDF2 import PdfWriter, PdfMerger, PdfFileReader, PdfReader, PageObject, PaperSize, Transformation
-import os, re, argparse
+from PyPDF2 import PdfMerger, PdfReader
+import os, argparse
 
 def find_pdfs(basedir):
     return (os.path.join(root, file)
@@ -38,8 +38,8 @@ parser = argparse.ArgumentParser(
 {app_name} merges a sorted list of all pdfs contained in --basedir into a single output.pdf.
 
 Example usage:
-    python ~/bin/gather_pdfs.py -d . -o "Numerical_Methods_in_Physics_with_Python.pdf" 
-    >>> outputs a file called output.pdf
+    python ~/bin/gather_pdfs.py -d . -o "merged_docs.pdf" 
+    >>> outputs `merged_docs.pdf` containing all pdfs in the current directory
 
 """, 
                     # epilog='----'
