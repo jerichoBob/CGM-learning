@@ -31,6 +31,7 @@ def get_ion_redshifts(specdir):
     return redshifts
 
 def read_spec(specdir):
+    """grabs the 1d spectrum from `specdir` and returns the wave, flux, and error arrays"""
     # print(f"specdir: {specdir}")
     elements = os.path.split(specdir)
     fits_filename = elements[-1] + '.fits'
