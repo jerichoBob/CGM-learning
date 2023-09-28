@@ -78,7 +78,7 @@ def load_transitions_from_scratch(specdir, basedir, z):
     lines = sorted(lines)
     print(f"z: {z}  lines: {lines}")
     try:
-        absys=A.Absorber(z=z,wave=wave,flux=flux,error=error,lines=lines, window_lim=[-2000,2000])  
+        absys=A.Absorber(z=z,wave=wave,flux=flux,error=error,lines=lines, window_lim=[-2000,2000], order_init=0, mask_init=[-200,200])  
         ions=absys.ions
 
         M.Transitions(ions, basedir=basedir)
