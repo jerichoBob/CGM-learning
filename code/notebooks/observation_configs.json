@@ -1,0 +1,103 @@
+{
+    "base_dir":"/Users/robertseaton/rwseaton@ncsu.edu - Google Drive/My Drive/Astro Research/KCWI_1429_Data/Fluxed",
+    "observations":[
+        {
+            "flux":"KB.20180708.23055_icubes_corrected_flux.fits",
+            "var":"KB.20180708.23055_icubes_corrected_var.fits",
+            "pt_x": 17, 
+            "pt_y": 39,
+            "nb_wave_lo": 4645.0,
+            "nb_wave_hi": 4659.0,
+            "nb_index_lo": 1418,
+            "nb_index_hi": 1432,
+            "window_size_x": 0,
+            "window_size_y": 0,
+            "image_shift_x": 0,
+            "image_shift_y": 0
+        },
+        {
+            "flux":"KB.20180708.24349_icubes_corrected_flux.fits",
+            "var":"KB.20180708.24349_icubes_corrected_var.fits",
+            "pt_x": 17, 
+            "pt_y": 39,
+            "nb_index_lo": 1420,
+            "nb_index_hi": 1434,
+            "nb_wave_lo": 4646.02,
+            "nb_wave_hi`": 4660.08,
+            "window_size_x": 0,
+            "window_size_y": 0,
+            "image_shift_x": 0,
+            "image_shift_y": 0
+        },
+        {
+            "flux":"KB.20190601.32100_icubes_corrected_flux.fits",
+            "var":"KB.20190601.32100_icubes_corrected_var.fits",
+            "pt_x": 16,
+            "pt_y": 43,
+            "nb_index_lo": 1420,
+            "nb_index_hi": 1431,
+            "nb_wave_lo": 4646.26,
+            "nb_wave_hi`": 4657.01,
+            "window_size_x": 0,
+            "window_size_y": 0,
+            "image_shift_x": 0,
+            "image_shift_y": 0
+        },
+        {
+            "flux":"KB.20190601.33358_icubes_corrected_flux.fits",
+            "var":"KB.20190601.33358_icubes_corrected_var.fits",
+            "pt_x": 18, 
+            "pt_y": 36,
+            "nb_index_lo": 1419,
+            "nb_index_hi": 1435,
+            "nb_wave_lo": 4645.07,
+            "nb_wave_hi`": 4661.1,
+            "window_size_x": 0,
+            "window_size_y": 0,
+            "image_shift_x": 0,
+            "image_shift_y": 0
+        },
+        {
+            "flux":"KB.20200520.37578_icubes_corrected_flux.fits",
+            "var":"KB.20200520.37578_icubes_corrected_var.fits",
+            "pt_x": 17, 
+            "pt_y": 39,
+            "nb_index_lo": 1418,
+            "nb_index_hi": 1433,
+            "nb_wave_lo": 4644.62,
+            "nb_wave_hi`": 4660.42,
+            "window_size_x": 0,
+            "window_size_y": 0,
+            "image_shift_x": 0,
+            "image_shift_y": 0
+        },
+        {
+            "flux":"KB.20200520.38847_icubes_corrected_flux.fits",
+            "var":"KB.20200520.38847_icubes_corrected_var.fits",
+            "pt_x": 17, 
+            "pt_y": 39,
+            "nb_index_lo": 1418,
+            "nb_index_hi": 1434,
+            "nb_wave_lo": 4645.45,
+            "nb_wave_hi`": 4660.39,
+            "window_size_x": 0,
+            "window_size_y": 0,
+            "image_shift_x": 0,
+            "image_shift_y": 0
+        },
+        {
+            "flux":"KB.20200520.40119_icubes_corrected_flux.fits",
+            "var":"KB.20200520.40119_icubes_corrected_var.fits",
+            "pt_x": 17, 
+            "pt_y": 39,
+            "nb_index_lo": 1416,
+            "nb_index_hi": 1432,
+            "nb_wave_lo": 4643.4,
+            "nb_wave_hi`": 4658.92,
+            "window_size_x": 0,
+            "window_size_y": 0,
+            "image_shift_x": 0,
+            "image_shift_y": 0
+        }
+    ]
+}
