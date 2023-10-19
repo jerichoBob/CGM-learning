@@ -4,16 +4,12 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 
-from astropy.io import fits
 from astropy.wcs import WCS, FITSFixedWarning
 from astropy import units as u
 
 from kcwitools.io import open_kcwi_cube
-from kcwitools.utils import build_wave
-from kcwitools import extract_weighted_spectrum as ke
 from kcwitools import image as im
 from linetools.utils import radec_to_coord
-# from kcwitools import utils as kcwi_u
 import bobutils.utils as bu
 
 import warnings
@@ -95,13 +91,15 @@ def bobs_mpl_params():
     mpl.rcParams["savefig.facecolor"] = 'white'
 
 def transform_pixels(x1, y1, wcs1, wcs2):
-    r, d = wcs1.pixel_to_world_values(x1, y1)
-    x2, y2 = wcs2.world_to_pixel_values(r, d)
+    ra, dec = wcs1.pixel_to_world_values(x1, y1) # from this
+    x2, y2 = wcs2.world_to_pixel_values(ra, dec) # to this
     return x2, y2
+
 def find_fits(basedir, endswith):
     return (os.path.join(root, file)
         for root, dirs, files in os.walk(basedir)
             for file in files if root == basedir and file.lower().endswith(endswith))
+
 def find_files_ending_with(directory, endswith):
     # List all files in the specified directory
     files = os.listdir(directory)
@@ -112,24 +110,6 @@ def find_files_ending_with(directory, endswith):
 def find_index_exceeding_value(lst, val):
     indices = [index for index, value in enumerate(lst) if value >= val]
     return indices[0] if indices else None
-
-def read_and_prep_flux_var_data(flux_file, var_file, minwave, maxwave, ybot, ytop):
-    """ This method reads the flux and var cubes for a specific observation, and cleans them up before returning """
-    hdr, flux = open_kcwi_cube(flux_file)
-    _, var = open_kcwi_cube(var_file)
-    wave = build_wave(hdr)
-
-    # first do a little data cleanup
-    var[np.isnan(flux)]=1.
-    flux[np.isnan(flux)] = 0.0000
-
-    slices = np.where((wave >= minwave) & (wave <= maxwave))[0]
-    wave = wave[slices]
-    flux = flux[slices,int(ybot):int(ytop),:]
-    var = var[slices,int(ybot):int(ytop),:]
-    print(f"flux.shape={flux.shape}") # (slices, y, x)
-
-    return hdr, flux, var, wave
 
 def label_axes(fig):
     for i, ax in enumerate(fig.axes):
@@ -157,7 +137,6 @@ def plot_sightlines(ax, xs, ys, box_size, color='w-', lw=0.5):
         ax.plot([xs[i] - hb, xs[i] + hb, xs[i] + hb, xs[i] - hb, xs[i] - hb], 
                 [ys[i] - hb, ys[i] - hb, ys[i] + hb, ys[i] + hb, ys[i] - hb], color, lw=lw)
     
-
 def display_wl_image(ax, title, wl_image, xs, ys, xh_lim, yh_lim, hdr_f, draw_axis=False):
     """displays the whitelight image with the sightline(s) overlaid"""
     # box_size_arcsecond = 2
@@ -172,18 +151,6 @@ def display_wl_image(ax, title, wl_image, xs, ys, xh_lim, yh_lim, hdr_f, draw_ax
     ax.imshow(wl_image, origin='lower', interpolation="nearest", cmap=cmap, vmin=0)
     # ax.imshow(wl_image, origin='lower', interpolation="nearest", cmap=cmap, vmin=0, vmax=80)
     # plt.colorbar(im)
-    # ax.set_xlabel(' ')
-    # ax.set_ylabel(' ')
-
-    # projection needs to be turned on in order for this to work
-    # ax.coords.grid(True, color='white', ls='solid')
-    # ax.coords[0].set_axislabel('Galactic Longitude')
-    # ax.coords[1].set_axislabel('Galactic Latitude')
-
-    # overlay = ax.get_coords_overlay('fk5')
-    # overlay.grid(color='white', ls='dotted')
-    # overlay[0].set_axislabel('Right Ascension (J2000)')
-    # overlay[1].set_axislabel('Declination (J2000)')
 
 
     box_size = 3
@@ -311,28 +278,10 @@ def display_test():
     plt.show()
 
 
-def combine_spectra_ivw(specs):
-    """Combine the collection of 1D spectra into a single spectrum using inverse variance weighting"""
-    """See https://en.wikipedia.org/wiki/Inverse-variance_weighting"""
-    print(f"# of spectra={len(specs)}")
-    fluxlen = len(specs[0].flux)
-    print(f"fluxlen={fluxlen}")
-    flux_tot = np.zeros(fluxlen)
-    var_tot = np.zeros(fluxlen)
-    for lndx in range(fluxlen): # for each lambda, apply inverse variance weighting
-        sum_ysigma = 0.0
-        sum_1sigma = 0.0
-        for sp in specs: # for each observation (that is, each spectrum)...
-            sum_ysigma += sp.flux[lndx] / (sp.sig[lndx] ** 2)
-            sum_1sigma += 1.0 / (sp.sig[lndx] ** 2)
-        flux_tot[lndx] = sum_ysigma / sum_1sigma
-        var_tot[lndx] = 1.0 / sum_1sigma
-
-    return flux_tot, var_tot
-
 def deal_with_wl_image(ax, title, wl_image, xs, ys, xh_lim, yh_lim, hdr_f, draw_axis=False):
     """displays the whitelight image with the sightline(s) overlaid"""
     pass
+
 
 def stack_spectra():
     bobs_mpl_params()
@@ -348,8 +297,7 @@ def stack_spectra():
     yc0 = [39]
 
     # define y-axis cropping bounds for the flux and var cubes
-    ybot = 15.5
-    ytop = 80.5
+    
     
     fig = plt.figure(figsize=(14,10))
     fig.suptitle(f"{file_cnt} observations of 1429")
@@ -358,16 +306,16 @@ def stack_spectra():
     
     wcs_ref = None # our first observiation will go here, and we will use it to transform the other WCS's
     wcs_cur = None # this will be the current WCS we are working with
-
-    specs = []
-
+    
+    ybot = 15.5
+    ytop = 80.5
     for i in range(file_cnt):
         ffile = flux_files[i]
         vfile = var_files[i]
     
         minwave = 3500.
         maxwave = 5500.
-        hdr, flux, var, wave = read_and_prep_flux_var_data(ffile, vfile, minwave, maxwave, ybot, ytop)
+        hdr, flux, var, wave = bu.read_and_prep_flux_var_data(ffile, vfile, minwave, maxwave, ybot, ytop)
 
         # Create a narrow-band whitelight image to plot
         # nb_min = 4630.
@@ -409,21 +357,22 @@ def stack_spectra():
         # ax2.axhline(y=ybot, linewidth=1, linestyle="--")
         # ax2.axhline(y=ytop, linewidth=1, linestyle="--")
 
-        box_size_arcsecond = 2
-        box_size = int(box_size_arcsecond / (hdr["CD2_2"] * 3600))
-        hb = box_size // 2
-        print(f"hb={hb} pixels")
+        # box_size_arcsecond = 2
+        # box_size = int(box_size_arcsecond / (hdr["CD2_2"] * 3600))
+        # hb = box_size // 2
+        # print(f"hb={hb} pixels")
 
-        flux_cut = flux[:, yc[0]-hb:yc[0]+hb+1, xc[0]-hb:xc[0]+hb+1]
-        var_cut  =  var[:, yc[0]-hb:yc[0]+hb+1, xc[0]-hb:xc[0]+hb+1]
-        # extract the weighted spectrum and variance
-        with warnings.catch_warnings():
-            # Ignore model linearity warning from the fitter
-            warnings.simplefilter('ignore')
-            sp = ke.extract_weighted_spectrum(flux_cut, var_cut, wave, weights='Data')
-        specs.append(sp) # add the spectrum to our list
+        # flux_cut = flux[:, yc[0]-hb:yc[0]+hb+1, xc[0]-hb:xc[0]+hb+1]
+        # var_cut  =  var[:, yc[0]-hb:yc[0]+hb+1, xc[0]-hb:xc[0]+hb+1]
+        # # extract the weighted spectrum and variance
+        # with warnings.catch_warnings():
+        #     # Ignore model linearity warning from the fitter
+        #     warnings.simplefilter('ignore')
+        #     sp = ke.extract_weighted_spectrum(flux_cut, var_cut, wave, weights='Data')
+        # specs.append(sp) # add the spectrum to our list
 
-    spec, var = combine_spectra_ivw(specs)            
+    spec, var = bu.extract_spectra(flux_files, var_files, ra, dec, box_size=3)
+
 
     # outside the loop
     lw = 0.5
@@ -446,92 +395,6 @@ Inverse Variance-weighted Spectrum summed over {file_cnt} Observations"""
 
     plt.show()
 
-def cropper():
-    """this is me figuring out how to crop down a data cube too just the region I want"""
-    bobs_mpl_params()
-    basedir = configs["base_dir"]
-    observations = configs["observations"]
-    flux_files = [os.path.join(basedir,obs['flux']) for obs in observations if 'flux' in obs]
-    var_files = [os.path.join(basedir,obs['var']) for obs in observations if 'var' in obs]
- 
-    # only one sightline for now -- just checking our numbers
-    xc = [17]
-    yc = [39]
-    # cropping bounds
-    ybot = 15.5
-    ytop = 80.5
-    spec_sum = None # this needs to have the same shape as the spectrum shape
-    err_sum = None # this needs to have the same the spectrum shape
-    
-    ffile = flux_files[0]
-    vfile = var_files[0]
-    
-    minwave = 3500.
-    maxwave = 5500.
-    hdr, flux, var, wave = read_and_prep_flux_var_data(ffile, vfile, minwave, maxwave, ybot, ytop)
-    
-    # Create a narrow-band whitelight image to plot
-    nb_min = 4546.02
-    nb_max = 4760.08
-    wl_image = im.build_whitelight(hdr, flux, minwave=nb_min, maxwave=nb_max)
-
-    sh = wl_image.shape
-    xh_lim = [0, sh[1]]
-    yh_lim = [0, sh[0]]
-
-    title = ffile.split("/")[-1].split("_icubes_corrected_flux.fits")[0]
-
-    fig = plt.figure(figsize=(14,10))
-    fig.suptitle("Cropping 1429")
-    gs = gridspec.GridSpec(5, 3, figure=fig)
-
-
-    # ax_image = fig.add_subplot(gs[:, 0:1])
-    wcs_cur = WCS(hdr).celestial
-    ax_image = fig.add_subplot(gs[:, 0:1], projection=wcs_cur)
-    display_wl_image(ax_image, title, wl_image, xc, yc, xh_lim, yh_lim, hdr)
-
-    # ax_image.axhline(y=ybot, linewidth=1, linestyle="--")
-    # ax_image.axhline(y=ytop, linewidth=1, linestyle="--")
-
-    show_spectra = True
-    if show_spectra:
-        # sightline and spectrum
-        box_size_arcsecond = 2
-        box_size = int(box_size_arcsecond / (hdr["CD2_2"] * 3600))
-        hb = box_size // 2
-
-        # extract the weighted spectrum and variance
-        flux_cut = flux[:, yc[0]-hb:yc[0]+hb+1, xc[0]-hb:xc[0]+hb+1]
-        var_cut  =  var[:, yc[0]-hb:yc[0]+hb+1, xc[0]-hb:xc[0]+hb+1]
-        # print(f"shape of flux_cut: {flux_cut.shape}")
-        with warnings.catch_warnings():
-            # Ignore model linearity warning from the fitter
-            warnings.simplefilter('ignore')
-            sp = ke.extract_weighted_spectrum(flux_cut, var_cut, wave, weights='Data')
-
-        flux_1d = sp.flux
-        wave_1d = sp.wavelength
-        err_1d = sp.sig
-        spec_sum = flux_1d
-        err_sum = err_1d
-
-        lw = 0.5
-        ax_spec = fig.add_subplot(gs[2:3, 1:3]) 
-        ax_spec.plot(wave_1d, spec_sum, 'b-', lw=lw, label="Flux")
-        ax_spec2 = ax_spec.twinx()
-        ax_spec2.plot(wave_1d, err_sum, 'r-', lw=lw, label="Error")
-        ax_spec.set_title("Flux and Error Spectrum")
-        ax_spec.set_xlabel("Wavelength")
-        ax_spec.set_ylabel("Flux")
-        ax_spec2.set_ylabel("Error")
-        # ax_spec.legend(loc='upper right', bbox_to_anchor=(1, 1))
-        # ax_spec2.legend(loc='upper right', bbox_to_anchor=(1, .9))
-        ax_spec.legend()
-
-    plt.subplots_adjust(left=0.079, bottom=0.043, right=0.967, top=0.952, wspace=0.064, hspace=0.0)
-
-    plt.show()
 
 def read_headers():
     basedir = configs["base_dir"]
@@ -556,4 +419,3 @@ def read_headers():
 
 if __name__ == "__main__":
     stack_spectra()
-    # cropper()
