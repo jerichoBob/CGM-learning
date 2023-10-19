@@ -1,12 +1,17 @@
-# print("<hi>")
 import numpy as np
 from math import floor, log10
 from astropy import units as u
+import warnings
+from kcwitools.io import open_kcwi_cube
+from kcwitools.utils import build_wave
+from kcwitools import extract_weighted_spectrum as ke
+
+from astropy.wcs import WCS, FITSFixedWarning
 
 # This just draws a single box centered at (x,y) and sz from that center point in the n/e/s/w directions 
 def plotbox(plt, x, y, sz, c):
-    ax = x - 0.5;  # I don't know why this is yet.... :()
-    ay = y - 0.5;
+    ax = x - 0.5
+    ay = y - 0.5
     plt.plot(
         [ax, ax,    ax-sz, ax-sz, ax],
         [ay, ay-sz, ay-sz, ay,    ay],
@@ -25,9 +30,27 @@ def plotcircle(plt, x, y, labels, sz, c):
 
         plt.text(x[i]-1.5*sz, y[i], labels[i], color=colour)
 
+def read_and_prep_flux_var_data(flux_file, var_file, minwave, maxwave, ybot, ytop):
+    """ This method reads the flux and var cubes for a specific observation, and cleans them up before returning """
+    hdr, flux = open_kcwi_cube(flux_file)
+    _, var = open_kcwi_cube(var_file)
+    wave = build_wave(hdr)
+
+    # first do a little data cleanup
+    var[np.isnan(flux)]=1.
+    flux[np.isnan(flux)] = 0.0000
+
+    slices = np.where((wave >= minwave) & (wave <= maxwave))[0]
+    wave = wave[slices]
+    flux = flux[slices,int(ybot):int(ytop),:]
+    var = var[slices,int(ybot):int(ytop),:]
+    print(f"flux.shape={flux.shape}") # (slices, y, x)
+
+    return hdr, flux, var, wave
 
 def corrected_corner_define(xx, yy, flux, var, deltax=5, deltay=5):
-# corrected variation of Rongmon's "corner_define" function in Extract_1D_Spectra_J2222.ipynb
+    """corrected variation of "corner_define" function found in Extract_1D_Spectra_J2222.ipynb"""
+# 
     x_halfbox = (deltax-1)//2
     y_halfbox= (deltay-1)//2
 
@@ -49,6 +72,69 @@ def corrected_corner_define(xx, yy, flux, var, deltax=5, deltay=5):
     x=[y1,y1,y2,y2,y1]
     y=[x1,x2,x2,x1,x1]
     return x, y, sub_flux, sub_var
+
+def combine_spectra_ivw(specs):
+    """Combine the collection of 1D spectra into a single spectrum using inverse variance weighting"""
+    """See https://en.wikipedia.org/wiki/Inverse-variance_weighting"""
+    print(f"# of spectra={len(specs)}")
+    fluxlen = len(specs[0].flux)
+    print(f"fluxlen={fluxlen}")
+    flux_tot = np.zeros(fluxlen)
+    var_tot = np.zeros(fluxlen)
+    for lndx in range(fluxlen): # for each lambda, apply inverse variance weighting
+        sum_ysigma = 0.0
+        sum_1sigma = 0.0
+        for sp in specs: # for each observation (that is, each spectrum)...
+            sum_ysigma += sp.flux[lndx] / (sp.sig[lndx] ** 2)
+            sum_1sigma += 1.0 / (sp.sig[lndx] ** 2)
+        flux_tot[lndx] = sum_ysigma / sum_1sigma
+        var_tot[lndx] = 1.0 / sum_1sigma
+
+    return flux_tot, var_tot
+
+
+def extract_spectra(flux_files, var_files, ra, dec, box_size):
+    """
+    params:
+        * flux_files: a list of flux files to extract spectra from
+        * var_files: a list of var files to extract spectra from
+        * ra: the RA of the sightline
+        * dec: the Dec of the sightline
+        * box_size: the size of the aperature to extract the spectra from
+    
+    returns: 
+        * XSpectrum1D flux and variance objects
+    """
+    file_cnt = len(flux_files)
+ 
+    ybot = 15.5
+    ytop = 80.5
+    specs = []
+    for i in range(file_cnt):
+        ffile = flux_files[i]
+        vfile = var_files[i]
+
+        minwave = 3500.
+        maxwave = 5500.
+        hdr, flux, var, wave = read_and_prep_flux_var_data(ffile, vfile, minwave, maxwave, ybot, ytop)
+        wcs_cur = WCS(hdr).celestial
+        xc, yc = wcs_cur.world_to_pixel_values(ra, dec)
+        xc = np.int32(xc)
+        yc = np.int32(yc)
+        hb = box_size // 2
+
+        flux_cut = flux[:, yc[0]-hb:yc[0]+hb+1, xc[0]-hb:xc[0]+hb+1]
+        var_cut  =  var[:, yc[0]-hb:yc[0]+hb+1, xc[0]-hb:xc[0]+hb+1]
+        # extract the weighted spectrum and variance
+        with warnings.catch_warnings():
+            # Ignore model linearity warning from the fitter
+            warnings.simplefilter('ignore')
+            sp = ke.extract_weighted_spectrum(flux_cut, var_cut, wave, weights='Data')
+        specs.append(sp) # add the spectrum to our list
+
+    
+    spec, var = combine_spectra_ivw(specs)            
+    return spec, var
 
 def signal_to_noise(wave, flux, co_begin=3500, co_end=5500):
     '''
@@ -74,6 +160,9 @@ def signal_to_noise(wave, flux, co_begin=3500, co_end=5500):
     # print(f"stddev flux between {wave_min}-{wave_max}: ", stddev_flux)
     # print(f"snr between {wave_min}-{wave_max}: ", snr)
     return snr
+def signal_to_noise(wave, flux, var, co_begin=3500, co_end=5500):
+    """"""
+    pass
 
 
 def sig_figs(x: float, precision: int):
