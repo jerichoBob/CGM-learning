@@ -1,3 +1,4 @@
+"""updating extraction tool to handle extraction of sightlines across multiple (7) different observations """
 import bobutils.layout_utils as lu
 import bobutils.utils as bu
 
