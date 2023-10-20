@@ -117,7 +117,7 @@ def label_axes(fig):
         ax.tick_params(labelbottom=False, labelleft=False)
 
 def create_images_layout(plt, count=6):
-    """returns an arround of {count} axes for images to be placed within"""
+    """returns an array of {count} axes for images to be placed within"""
     fig = plt.figure(figsize=(14,10), layout="constrained", dpi=150)
     # fig.suptitle(title)
     axs_image = []
