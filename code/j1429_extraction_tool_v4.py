@@ -140,7 +140,7 @@ def old_stuff():
 
 def load_ref_cube():
     """Our reference data cube is where we locate the sightlines and construct reference WCS."""
-    flux_filename = base_path+"/J1429_rb_flux.fits"
+    flux_filename = base_pat+"/J1429_rb_flux.fits" # NOTE: you want the corrected flux and variance cubes here
     var_filename = base_path+"/J1429_rb_var.fits"
 
     # Load flux and variance data cubes
@@ -159,46 +159,18 @@ def load_ref_cube():
 
     return flux, var, hdr, wave, wcs_ref, wl_image
     
-def load_observations():
-    """returns a set of ready-to-use (hdr, flux, var, wave) observation data"""
-    o_dir = base_path+"/observations"
 
-    flux_file_ends_with = "_icubes_corrected_flux.fits"
-    var_file_ends_with = "_icubes_corrected_var.fits"
-    files = bu.find_files_ending_with(o_dir, flux_file_ends_with)
-    # make sure that the flux and var files are in the same order
-    # get the observation name from the flux files
-    obs_names = []
-    for i in range(len(files)):
-        obs_names.append(files[i].split("/")[-1].split(flux_file_ends_with)[0])
-
-    obs_names.sort()
-    o_cnt = len(obs_names)
-
-    ybot = 15.5
-    ytop = 80.5
-    observations = []
-    for i in range(o_cnt):
-        ffile = o_dir+"/"+obs_names[i]+flux_file_ends_with
-        vfile = o_dir+"/"+obs_names[i]+var_file_ends_with
-    
-        minwave = 3500.
-        maxwave = 5500.
-        observations.append(bu.read_and_prep_flux_var_data(ffile, vfile, minwave, maxwave, ybot, ytop))
-
-    return observations
-
-def define_sightlines():
+def load_sightlines():
     """"""
     points = [
-        (29,36,3), #0
-        (29,39,3),    
-        (32,37,3),
-        (32,40,3),
-        (35,39,3),
-        (38,39,3), 
-        (50,33,7),
-        (35,24,7),
+        (29,36, 3), # 
+        # (29,39,3),    
+        # (32,37,3),
+        # (32,40,3),
+        # (35,39,3),
+        # (38,39,3), 
+        # (50,33,7),
+        # (35,24,7),
     ]
     x_coords, y_coords, sizes = zip(*points)
     # convert to lists
@@ -209,11 +181,11 @@ def define_sightlines():
     # return points
 
 
-def extract_sightline_spectra(observations, ra, dec, box_size=3):
+def extract_sightline_spectra(observations, sl_radec):
     """for a given sightline specified by ra,dec, extract the spectra from each observation and combine them"""
     """observations = [(hdr, flux, var, wave)]"""
-    spec, var = bu.extract_spectra_from_observations(observations, ra, dec, box_size=box_size)
-    return spec, var
+    spec, var, wave = bu.extract_spectra_from_observations(observations, sl_radec)
+    return spec, var, wave
 
 def label_axes(fig):
     for i, ax in enumerate(fig.axes):
@@ -239,7 +211,7 @@ def create_mpl_layout(plt, count=8):
 def show_ref_image(axs_image, wl_image):
     """"""
     pass
-def show_sightline_spectra():
+def show_sightline_spectra(ax_specs):
     """"""
     pass
 
@@ -264,23 +236,35 @@ and combines the spectra using inverse variance weighting.
 def handle_commandline_args():
     """ """
     pass
+def radecs_from_sightline_boxes(wcs_ref, pt_xs, pt_ys, szs):
+    """ Converts the sightline box corners to an array of ra,dec tuples"""
+    radecs = []
+    sightline_count = len(pt_xs)
+    for sl_ndx in range(sightline_count): # loop through the sightlines
+        print(f"=== sightline   pt_xs: {pt_xs[sl_ndx]} pt_ys: {pt_ys[sl_ndx]} szs: {szs[sl_ndx]}")
+        xs, ys = bu.box_corners(pt_xs[sl_ndx], pt_ys[sl_ndx], deltax=szs[sl_ndx], deltay=szs[sl_ndx]) #NOTE: still a question whether we should use these for extraction, or just drawing the box against the wl image
+        print(f"=== sightline box corners   xs: {xs} ys: {ys}")
+        radec = wcs_ref.pixel_to_world_values(xs, ys)
+        print(f"radec: {radec}")
+        radecs.append(radec)
+    return radecs
 
 def main(): 
     """ """
-    xs, ys, szs = define_sightlines()
     flux, var, hdr, wave, wcs_ref, wl_image = load_ref_cube()
-    ra, dec = wcs_ref.pixel_to_world_values(xs, ys)
+    xs, ys, szs = load_sightlines()
+    sl_radecs = radecs_from_sightline_boxes(wcs_ref, xs, ys, szs)
 
-    observations = load_observations()
+    observations = bu.load_observations()
     sightline_count = len(xs)
     for sl_ndx in range(sightline_count): # loop through the sightlines
-        spec, var = extract_sightline_spectra(observations, ra[sl_ndx], dec[sl_ndx], box_size=szs[sl_ndx])
+        spec, var, wave = extract_sightline_spectra(observations, sl_radecs[sl_ndx])
 
     # definte graphics environment
-    fig, ax_image, ax_specs = create_mpl_layout(plt, )
+    _, ax_image, ax_specs = create_mpl_layout(plt, count=sightline_count )
 
     show_ref_image(ax_image, wl_image)
-    show_sightline_spectra()
+    show_sightline_spectra(ax_specs)
 
 if __name__ == "__main__":
     main()
