@@ -1,192 +1,26 @@
-import os
 from math import floor, log10
 import numpy as np
 import warnings
+from math import log10, floor, isnan
 
 from astropy import units as u
 from astropy.wcs import WCS, FITSFixedWarning
+from astropy.utils.exceptions import AstropyWarning
+
 from kcwitools.io import open_kcwi_cube
 from kcwitools.utils import build_wave
+from kcwitools.spec import extract_square, extract_rectangle
 from kcwitools import extract_weighted_spectrum as ke
+from kcwitools import image as im
 
-class Observation:
-    """ A container for the info associated with a single observation """
-    
-    # def __init__(self):
-    #     self.hdr_f = None
-    #     self.hdr_v = None
-    #     self.flux = None
-    #     self.var = None
-    #     self.wcs_f = None
-    #     self.wcs_v = None
-    #     self.wave = None
-    #     self.wl = None
-    #     self.f_file = None
-    #     self.v_file = None
+from linetools.spectra.xspectrum1d import XSpectrum1D
 
-    # def __init__(self, hdr_f, flux, hdr_v, var, wave, flux_file):
-    #     self.hdr_f = hdr_f
-    #     self.flux = flux
-    #     self.hdr_v = hdr_v
-    #     self.var = var
-    #     self.wave = wave
-    #     self.flux_file = flux_file
+from shapely.geometry import Polygon
 
-    def __init__(self, hdr_f=None, hdr_v=None, flux=None, var=None, wcs_flux=None, wcs_var=None, wave=None, wl=None, flux_file=None, var_file=None):
-        self._hdr_f = hdr_f
-        self._hdr_v = hdr_v
-        self._flux = flux
-        self._var = var
-        self._wcs_f = wcs_flux
-        self._wcs_v = wcs_var
-        self._wave = wave
-        self._wl = wl          # the whitelight image\
-        self._f_file = flux_file
-        self._v_file = var_file
+import os, sys
+sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 
-    
-    # --- hdr_f -----------------------------------------------
-    @property
-    def hdr_f(self):
-        """Get the 'hdr_f' property."""
-        return self._hdr_f
-
-    @hdr_f.setter
-    def hdr_f(self, value):
-        self._hdr_f = value
-
-    @hdr_f.deleter
-    def hdr_f(self):
-        del self._hdr_f
-
-    # --- hdr_v -----------------------------------------------
-    @property
-    def hdr_v(self):
-        """Get the 'hdr_v' property."""
-        return self._hdr_v
-
-    @hdr_v.setter
-    def hdr_v(self, value):
-        self._hdr_v = value
-
-    @hdr_v.deleter
-    def hdr_v(self):
-        del self._hdr_v
-
-    # --- flux -----------------------------------------------
-    @property
-    def flux(self):
-        """Get the 'flux' property."""
-        return self._flux
-
-    @flux.setter
-    def flux(self, value):
-        self._flux = value
-
-    @flux.deleter
-    def flux(self):
-        del self._flux
-
-    # --- var -----------------------------------------------
-    @property
-    def var(self):
-        """Get the 'var' property."""
-        return self._var
-
-    @var.setter
-    def var(self, value):
-        self._var = value
-
-    @var.deleter
-    def var(self):
-        del self._var
-        
-    # --- wcs_f -----------------------------------------------
-    @property
-    def wcs_f(self):
-        """Get the 'wcs_f' property."""
-        return self._wcs_f
-
-    @wcs_f.setter
-    def wcs_f(self, value):
-        self._wcs_f = value
-
-    @wcs_f.deleter
-    def wcs_f(self):
-        del self._wcs_f
-        
-    # --- wcs_v -----------------------------------------------
-    @property
-    def wcs_v(self):
-        """Get the 'wcs_v' property."""
-        return self._wcs_v
-
-    @wcs_v.setter
-    def wcs_v(self, value):
-        self._wcs_v = value
-
-    @wcs_v.deleter
-    def wcs_v(self):
-        del self._wcs_v
-        
-    # --- wave -----------------------------------------------
-    @property
-    def wave(self):
-        """Get the 'wave' property."""
-        return self._wave
-
-    @wave.setter
-    def wave(self, value):
-        self._wave = value
-
-    @wave.deleter
-    def wave(self):
-        del self._wave
-        
-    # --- wl -----------------------------------------------
-    @property
-    def wl(self):
-        """Get the 'wl' property."""
-        return self._wl
-
-    @wl.setter
-    def wl(self, value):
-        self._wl = value
-
-    @wl.deleter
-    def wl(self):
-        del self._wl
-        
-    # --- f_file -----------------------------------------------
-    @property
-    def f_file(self):
-        """Get the 'f_file' property."""
-        return self._f_file
-
-    @f_file.setter
-    def f_file(self, value):
-        self._f_file = value
-
-    @f_file.deleter
-    def f_file(self):
-        del self._f_file
-        
-    # --- v_file -----------------------------------------------
-    @property
-    def v_file(self):
-        """Get the 'v_file' property."""
-        return self._v_file
-
-    @v_file.setter
-    def v_file(self, value):
-        self._v_file = value
-
-    @v_file.deleter
-    def v_file(self):
-        del self._v_file
-        
-    def get_all(self):
-        return self._hdr_f, self._hdr_v, self._flux, self._var, self._wcs_f, self._wcs_v, self._wave, self._wl, self._f_file, self._v_file
+import bobutils.fileio as bio
 
 # This just draws a single box centered at (x,y) and sz from that center point in the n/e/s/w directions 
 def plotbox(plt, x, y, sz, c):
@@ -209,42 +43,6 @@ def plotcircle(plt, x, y, labels, sz, c):
         plotbox(plt, x_-1, y_, 1, colour) # west
 
         plt.text(x[i]-1.5*sz, y[i], labels[i], color=colour)
-
-def find_fits(basedir, endswith):
-    return (os.path.join(root, file)
-        for root, dirs, files in os.walk(basedir)
-            for file in files if root == basedir and file.lower().endswith(endswith))
-
-def find_files_ending_with(dir, endswith):
-    # List all files in the specified directory
-    files = os.listdir(dir)
-    # Filter the list to only include files that end with the specified suffix
-    return [os.path.join(dir, file) for file in files if file.endswith(endswith)]
-
-def read_and_prep_flux_var_data(flux_file, var_file, minwave, maxwave, ybot, ytop):
-    """ This method reads the flux and var cubes for a specific observation, and cleans them up before returning a new Observation object"""
-    hdr_f, flux = open_kcwi_cube(flux_file)
-    hdr_v, var = open_kcwi_cube(var_file)
-    wave = build_wave(hdr_f)
-    # print(f"flux file: {flux_file}")
-    # print(f"flux.shape={flux.shape}") # (lambda, y, x)
-    # print(f"var file: {var_file}")
-    # print(f"var.shape={var.shape}") # (lambda, y, x)
-
-    # first do a little data cleanup
-    var[np.isnan(var)]=1.
-    flux[np.isnan(flux)] = 0.0000
-
-    slices = np.where((wave >= minwave) & (wave <= maxwave))[0]
-    wave = wave[slices]
-    flux = flux[slices,:,:] 
-    var  =  var[slices,:,:] 
-
-    # flux = flux[slices,int(ybot):int(ytop),:] # NOTE: Cropping is busted.  Need to fix this.
-    # var  =  var[slices,int(ybot):int(ytop),:] # NOTE: Cropping is busted.  Need to fix this.
-    print(f"cropped flux.shape={flux.shape}") # (slices, y, x)
-    
-    return Observation(hdr_f=hdr_f, flux=flux, hdr_v=hdr_v, var=var, wave=wave, flux_file=flux_file)
 
 def box_corners(pt_x, pt_y, deltax=5, deltay=5, qfitsview_correction=-1.5):
     """
@@ -281,6 +79,98 @@ def flux_var_cutout(flux, var, xs, ys):
     print(f"flux_var_cutout x0:{x0}, x1:{x1}, y0:{y0}, y1:{y1}")
     return flux[:, y0:y1, x0:x1], var[:, y0:y1, x0:x1] # axis0 = lambda, axis1 = y, axis2 = x
 
+
+
+def calc_overlap_area(box_corners, pixel_corners):
+    """
+    Calculate the area of overlap between the extraction box and a pixel.
+    
+    :param box_corners: Corners of the extraction box
+    :param pixel_corners: Corners of the pixel
+    :return: The overlap area
+    """
+    # Create shapely polygons for the box and the pixel
+    box_poly = Polygon(box_corners)
+    pixel_poly = Polygon(pixel_corners)
+    
+    # Calculate the area of overlap
+    overlap_area = box_poly.intersection(pixel_poly).area
+    return overlap_area
+
+
+# Let's redefine the create_fractional_mask_rotated function to correctly calculate the weights
+def create_fractional_mask(box_corners, shape):
+    """
+    Create a fractional mask for a given bounding box with subpixel accuracy, handling rotation.
+    
+    :param box_corners: The corners of the bounding box (rotated)
+    :param shape: The shape of the 2D array to apply the mask to
+    :return: A 2D numpy array representing the mask
+    """
+    mask = np.zeros(shape)
+    
+    # Iterate over the coordinates of the pixels
+    for y in range(shape[0]):
+        for x in range(shape[1]):
+            # Define the corners of the current pixel
+            pixel_corners = np.array([
+                [x, y],
+                [x+1, y],
+                [x+1, y+1],
+                [x, y+1]
+            ])
+            # Calculate the area of overlap and set it as the weight for the pixel
+            mask[y, x] = calc_overlap_area(box_corners, pixel_corners)
+    
+    return mask
+
+def fractional_flux_var_spectra(wave, flux, var, xs, ys):
+    """
+    Extracts the flux and variance data from the observation cubes using a fractional mask.
+    """
+    # Calculate the 2D mask
+    shape = flux.shape[1:]  # Assuming flux shape is (wavelength, y, x)
+    print(f"flux shape={shape}")
+    box_corners = np.array([
+        [xs[0], ys[0]],
+        [xs[1], ys[0]],
+        [xs[1], ys[1]],
+        [xs[0], ys[1]]
+    ])
+    mask = create_fractional_mask(box_corners, shape)
+    print(f"mask shape={mask.shape}")
+    experiment = False
+    if experiment:
+        # get the s and y bounds of the non-zero part of the mask
+        ys = np.nonzero(mask)[0]
+        xs = np.nonzero(mask)[1]
+        #NOTE: shrink the mask down to it's non-zero values
+        mask_cut = mask[np.nonzero(mask)]
+        print(f"mask shape={mask.shape}")
+        # get the x and y bounds of the mask
+        flux_cut = flux[:, ys[0]:ys[1], xs[0]:xs[1]]
+        var_cut = var[:, ys[0]:ys[1], xs[0]:xs[1]]
+        weighted_flux = np.nansum(flux_cut * mask_cut, axis=(1, 2))
+        weighted_var = np.nansum(var_cut * mask_cut, axis=(1, 2))
+    else:
+        # Apply the mask to the flux and variance
+        weighted_flux = np.nansum(flux * mask, axis=(1, 2))
+        # weighted_var = np.nansum(var * mask**2, axis=(1, 2))  # Variance scales with the square of the mask
+        weighted_var = np.nansum(var * mask, axis=(1, 2)) 
+
+
+    # Replace NAN - no warnings
+    bad = np.isnan(weighted_var)
+    weighted_var[bad] = 100. # make it obvious that we have a problem
+
+    print(f"weighted_flux.shape={weighted_flux.shape}")
+    print(f"weighted_var.shape={weighted_var.shape}")
+    print("="*40)
+
+    # Create and return XSpectrum1D
+    return XSpectrum1D.from_tuple((wave, weighted_flux, weighted_var))
+    
+
 def corrected_corner_define(pt_x, pt_y, flux, var, deltax=5, deltay=5):
     """
     convenience function which returns the flux and var cutouts for a box around the specified point
@@ -309,6 +199,23 @@ def combine_spectra_ivw(specs):
 
     return flux_tot, var_tot, wave_tot
 
+
+def simple_extract_rectangle(wave, sub_flux, sub_var):
+    """
+    This is a drastically simplified version of kcwitools.spec.extract_rectangle().
+    Assumes that flux and var are already cut (hence sub_flux, sub_var).
+    """
+
+    flux_spec = np.nansum(sub_flux, axis=(1,2))
+    err_spec = np.sqrt(np.sum(sub_var, axis=(1,2)))
+
+    # Replace NAN - no warnings
+    bad = np.isnan(err_spec)
+    err_spec[bad] = 0.
+
+    # Create and return XSpectrum1D
+    return XSpectrum1D.from_tuple((wave, flux_spec, err_spec))
+    
 def extract_spectra(flux_files, var_files, ra, dec, box_size):
     """
     Extracts a combined spectra from the collection of flux and var files, centered at the specified RA and Dec, with the specified box size.   
@@ -333,7 +240,8 @@ def extract_spectra(flux_files, var_files, ra, dec, box_size):
 
         minwave = 3500.
         maxwave = 5500.
-        o = read_and_prep_flux_var_data(ffile, vfile, minwave, maxwave, ybot, ytop)
+        
+        o = bio.read_and_prep_flux_var_data(ffile, vfile, minwave, maxwave, ybot, ytop)
         wcs_cur = WCS(o.hdr_f).celestial
         o.wcs_f = wcs_cur
         xc, yc = wcs_cur.world_to_pixel_values(ra, dec)
@@ -346,15 +254,15 @@ def extract_spectra(flux_files, var_files, ra, dec, box_size):
         # extract the weighted spectrum and variance
         with warnings.catch_warnings():
             # Ignore model linearity warning from the fitter
-            warnings.simplefilter('ignore')
+            warnings.simplefilter('ignore', AstropyWarning)
+            # warnings.simplefilter('ignore')
             sp = ke.extract_weighted_spectrum(flux_cut, var_cut, o.wave, weights='Data')
         specs.append(sp) # add the spectrum to our list
 
-    
     spec, var, wave = combine_spectra_ivw(specs)            
     return spec, var, wave
 
-def extract_spectra_from_observations(observations, sl_radec):
+def extract_spectra_from_observations(sl_radec, observations):
     """
     Extracts a combined spectra from the collection of observations, contained within the sl_radec box.   
     ie. observations = [class Observation, class Observation, ...]
@@ -370,32 +278,50 @@ def extract_spectra_from_observations(observations, sl_radec):
     ras = sl_radec[0]
     decs = sl_radec[1]
     print("=-"*40)
-    print("=============== BEGINNING EXTRACTION ==================")
+    print(f"=============== BEGINNING EXTRACTION FOR RA:{ras[0]} DEC:{decs[0]} ==================")
     for ob in observations:
         # hdr_f, flux, hdr_v, var, wave, flux_file = o
         wcs_cur = WCS(ob.hdr_f).celestial
         xs, ys = wcs_cur.world_to_pixel_values(ras, decs)
-        print(f"before ras={ras}, decs={decs}")
+        print(f"ras={ras}, decs={decs} --> xs={xs}, ys={ys}")
         print(f"before xs={xs}, ys={ys}")
-        xs = np.round(xs)
-        ys = np.round(ys)
-        print(f"after xs={xs}, ys={ys}")        
-        # _, _, flux_cut, var_cut = corrected_corner_define(xc, yc, flux, var, deltax=box_size, deltay=box_size)
-        flux_cut, var_cut = flux_var_cutout(ob.flux, ob.var, xs, ys)
-        print(f"flux_cut.shape={flux_cut.shape}")
-        print(f"var_cut.shape={var_cut.shape}")
 
-        # extract the weighted spectrum and variance
+        handle_fractional_pixel = True
+        if handle_fractional_pixel:
+            # we can handle extraction of fractional pixels
+            sp = fractional_flux_var_spectra(ob.wave, ob.flux, ob.var, xs, ys)
+
+        else:
+            xs = np.round(xs)
+            ys = np.round(ys)
+
+            hb = box_size // 2
+
+            flux_cut = ob.flux[:, yc[0]-hb:yc[0]+hb+1, xc[0]-hb:xc[0]+hb+1]
+            var_cut  =  ob.var[:, yc[0]-hb:yc[0]+hb+1, xc[0]-hb:xc[0]+hb+1]
+
+        # xs = np.round(xs)
+        # ys = np.round(ys)
+        # print(f"after xs={xs}, ys={ys}")        
+        # _, _, flux_cut, var_cut = corrected_corner_define(xc, yc, flux, var, deltax=box_size, deltay=box_size)
+
+        # print(f"flux_cut.shape={flux_cut.shape}")
+        # print(f"var_cut.shape={var_cut.shape}")
+
+        # # extract the weighted spectrum and variance
         with warnings.catch_warnings():
-            # Ignore model linearity warning from the fitter
+        #     # Ignore model linearity warning from the fitter
             warnings.simplefilter('ignore')
-            sp = ke.extract_weighted_spectrum(flux_cut, var_cut, ob.wave, weights='Data')
+            warnings.simplefilter('ignore', AstropyWarning)
+        #     # sp = ke.extract_weighted_spectrum(flux_cut, var_cut, ob.wave, weights='Data')
+            sp = simple_extract_rectangle(ob.wave, flux_cut, var_cut)
+
         specs.append(sp)
     
     spec, var, wave = combine_spectra_ivw(specs)            
     return spec, var, wave
 
-def signal_to_noise(wave, flux, co_begin=3500, co_end=5500):
+def signal_to_noise2(wave, flux, co_begin=3500, co_end=5500):
     '''
     Calculates the signal to noise ratio (SNR) against a continuum region.
     Continuum range is inclusive of the endpoints
@@ -420,9 +346,48 @@ def signal_to_noise(wave, flux, co_begin=3500, co_end=5500):
     # print(f"snr between {wave_min}-{wave_max}: ", snr)
     return snr
 
-def signal_to_noise(wave, flux, var, co_begin=3500, co_end=5500):
-    """"""
-    pass
+def signal_to_noise3(wave, flux_spec, var_spec, co_begin=3500, co_end=5500):
+    """
+    Calculate the signal-to-noise ratio for a given wavelength range in 1D spectra.
+    
+    :param wave: The 1D numpy array representing the wavelength axis
+    :param flux_spec: The 1D numpy array representing the flux spectrum
+    :param var_spec: The 1D numpy array representing the variance spectrum
+    :param co_begin: The start of the wavelength range
+    :param end_wavelco_endength: The end of the wavelength range
+    :return: The SNR for the specified wavelength range
+    """
+    # Find the indices for the specified wavelength range
+    wave_min = co_begin * u.AA  # Adjust unit as per your data
+    wave_max = co_end * u.AA  # Adjust unit as per your data
+    wavelength_indices = np.where((wave >= wave_min) & (wave <= wave_max))[0]
+
+    # Extract the flux and variance for the wavelength range
+    # create a local copy of the flux and variance arrays
+    flux_copy = np.copy(flux_spec)
+    var_copy = np.copy(var_spec)
+
+    flux_range = flux_copy[wavelength_indices]
+    variance_range = var_copy[wavelength_indices]
+
+
+    # Calculate SNR
+    snr = np.sum(flux_range) / np.sqrt(np.sum(variance_range))
+    return snr
+
+
+def plot_sightlines_wcs(mpl_ax, target_wcs, radecs, color='w-', lw=0.5, show_label=True):
+    """ this isn't quite right yet. need to figure out how ras and decs are packed """
+    for i in range(len(radecs)):
+        ras, decs = radecs[i] # ras and decs define the edges of the extraction box
+        ax, ay = target_wcs.world_to_pixel_values(ras[1], decs[1])  
+        bx, by = target_wcs.world_to_pixel_values(ras[0], decs[1])
+        cx, cy = target_wcs.world_to_pixel_values(ras[0], decs[0])
+        dx, dy = target_wcs.world_to_pixel_values(ras[1], decs[0]) 
+        mpl_ax.plot([ax, bx, cx, dx, ax], 
+                    [ay, by, cy, dy, ay], color, lw=lw)
+        if show_label:
+            mpl_ax.text(ax-1, ay-1, str(i), color='w', fontsize = 14, ha='center', va='center')
 
 def sig_figs(x: float, precision: int):
     """
@@ -434,46 +399,17 @@ def sig_figs(x: float, precision: int):
     - float
     """
 
-    x = float(x)
+    if isnan(x) or x == 0:
+        # Return a default value or raise an error
+        return x  # or use `raise ValueError("Input cannot be NaN or zero")`
     precision = int(precision)
 
     return round(x, -int(floor(log10(abs(x)))) + (precision - 1))
 
-base_path = "/Users/robertseaton/Desktop/Physics-NCState/---Research/Analysis/J1429"
-def load_observations():
-    """returns a set of ready-to-use (hdr, flux, var, wave) observation data"""
-    o_dir = base_path+"/observations"
+def get_corrected_kcwi_data(narrowband_min, narrowband_max):
+    """ returns an array of Observation objects (after a few tweaks)"""
+    ob_array = bio.load_observations()
 
-    flux_file_ends_with = "_icubes_corrected_flux.fits"
-    var_file_ends_with = "_icubes_corrected_var.fits"
-    files = find_files_ending_with(o_dir, flux_file_ends_with)
-    # make sure that the flux and var files are in the same order
-    # get the observation name from the flux files
-    obs_names = []
-    for i in range(len(files)):
-        obs_names.append(files[i].split("/")[-1].split(flux_file_ends_with)[0])
-
-    obs_names.sort()
-    o_cnt = len(obs_names)
-
-    ybot = 15.5
-    ytop = 80.5
-    observations = []
-    for i in range(o_cnt):
-        ffile = o_dir+"/"+obs_names[i]+flux_file_ends_with
-        vfile = o_dir+"/"+obs_names[i]+var_file_ends_with
-    
-        minwave = 3500.
-        maxwave = 5500.
-
-        observations.append(read_and_prep_flux_var_data(ffile, vfile, minwave, maxwave, ybot, ytop))
-
-    return observations
-
-def get_corrected_kcwi_data():
-    """ returns an array of Observation objects"""
-    ob_array = load_observations()
-    """ now chocked full with more goodness... """
     for ob in ob_array:
         ob.wcs_f = WCS(ob.hdr_f).celestial
 
@@ -481,14 +417,10 @@ def get_corrected_kcwi_data():
         q_nan = np.isnan(ob.flux) 
         ob.flux[q_nan] = 0.0
 
-        # making a white-light image from the flux data-cube by summing 
-        # the flux along the wavelength axis
-        ob.wl_k = np.sum(ob.flux, axis=0)
-        # ob.wl_k = im.build_whitelight(hdr_k, flux, minwave=global_nb_min, maxwave=global_nb_max)
+        ob.wl_k = im.build_whitelight(ob.hdr_f, ob.flux, minwave=narrowband_min, maxwave=narrowband_max)
 
         # Loading the variance cube from index 2 of the KCWI fits file
         ob.wcs_v = WCS(ob.hdr_v).celestial # The WCS of the variance cube
-        # ob = Observation(hdr_f, hdr_v, flux, var, wcs_flux, wcs_var, wave, wl_k)
-        # results.append(ob)
+
 
     return ob_array

@@ -7,6 +7,7 @@ import matplotlib.gridspec as gridspec
 from astropy.io import fits
 from astropy.wcs import WCS, FITSFixedWarning
 from astropy import units as u
+from astropy.utils.exceptions import AstropyWarning
 
 from kcwitools import io as kcwi_io
 from kcwitools import image as im
@@ -14,9 +15,9 @@ from kcwitools import utils as kcwi_u
 
 from linetools.utils import radec_to_coord
 import bobutils.utils as bu
+import bobutils.fileio as bfi
 
 import warnings
-
 # global variables
 base_path = "/Users/robertseaton/Desktop/Physics-NCState/---Research/Analysis/J1429"
 # cmap = 'gnuplot'
@@ -286,20 +287,7 @@ def display_test():
     plt.show()
 
 
-def load_original_cube():
-    flux_filename = "/J1429+1202_KCWI_corrected_flux.fits"
 
-    fk = fits.open(base_path+flux_filename)
-    hdr_k = fk[0].header         # header of the flux cube
-    flux = fk[0].data          # the flux data cube
-    wcs_k = WCS(hdr_k).celestial # the World Coordinate System (WCS) of the flux cube
-
-    # Removing all the NaNs from the flux cube before making white-light or narrow-band image
-    q_nan = np.isnan(flux) 
-    flux[q_nan] = 0.0
-
-    wl_image = im.build_whitelight(hdr_k, flux, minwave=global_nb_min, maxwave=global_nb_max)
-    return wl_image, wcs_k
 
 def show_whitelight_image(ax, image, title="White Light", xh_lim=None, yh_lim=None):
     ax.imshow(image, origin='lower', interpolation='nearest', cmap=global_cmap, vmin=0)
@@ -386,7 +374,7 @@ def radecs_from_sightline_boxes(wcs_ref, pt_xs, pt_ys, szs):
 def stack_spectra():
     bobs_mpl_params()
     # get the 7 observation flux and var files
-    observations = bu.get_corrected_kcwi_data()
+    observations = bu.get_corrected_kcwi_data(global_nb_min, global_nb_max)
     file_cnt = len(observations)
 
 
@@ -397,14 +385,18 @@ def stack_spectra():
     fig = plt.figure(figsize=(14,10))
     fig.suptitle(f"{file_cnt} observations of 1429", fontsize=16)
     gs = gridspec.GridSpec(21, 2*file_cnt, figure=fig)
-    wl_image, wcs_kcwi = load_original_cube()
+    wl_image, wcs_kcwi = bfi.load_original_cube(global_nb_min, global_nb_max)
     ax_kcwi = fig.add_subplot(gs[0:6, 3:6], projection=wcs_kcwi)
     show_whitelight_image(ax_kcwi, wl_image, title="KCWI White Light")
-    # xs, ys, szs = load_sightlines()
-    # sl_radecs = radecs_from_sightline_boxes(wcs_kcwi, xs, ys, szs) # these are the reference radecs for the sightlines
 
-    wcs_ref = WCS(observations[0].hdr_f).celestial
-    sl_radecs = load_KB20180708_23055_sightlines(wcs_ref)
+    original_method = True
+    if original_method:
+        xs, ys, szs = load_sightlines()
+        sl_radecs = radecs_from_sightline_boxes(wcs_kcwi, xs, ys, szs) # these are the reference radecs for the sightlines
+    else:
+        wcs_ref = WCS(observations[0].hdr_f).celestial # using the first observation as the reference WCS
+        sl_radecs = load_KB20180708_23055_sightlines(wcs_ref)
+
     plot_sightlines_wcs(ax_kcwi, wcs_kcwi, sl_radecs, color='w-', lw=global_lw)
 
     hst_image, wcs_hst = load_hst_image()
@@ -425,9 +417,11 @@ def stack_spectra():
         # about the points we are interested in
         with warnings.catch_warnings():
             # Ignore a warning on using DATE-OBS in place of MJD-OBS
-            warnings.filterwarnings('ignore', 
-                                    message="""'datfix' made the change 'Set MJD-OBS to 58989.000000 from DATE-OBS.""",
-                                    category=FITSFixedWarning)
+            warnings.simplefilter('ignore', AstropyWarning)
+
+            # warnings.filterwarnings('ignore', 
+            #                         message="""'datfix' made the change 'Set MJD-OBS to 58989.000000 from DATE-OBS.""",
+            #                         category=FITSFixedWarning)
             if wcs_ref is None:
                 wcs_ref = WCS(ob.hdr_f).celestial
                 # ra, dec = wcs_ref.pixel_to_world_values(xc0, yc0)
@@ -459,7 +453,7 @@ def stack_spectra():
     plot_spectrum = True
     if plot_spectrum:
         
-        sl_radec = sl_radecs[0] # let's plot for the first sightline only
+        sl_radec = sl_radecs[1] # let's plot for the first sightline only
         box_ras, box_decs = sl_radec
         spec, var, wave = bu.extract_spectra_from_observations(observations, sl_radec)
 

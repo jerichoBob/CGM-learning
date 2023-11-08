@@ -2,10 +2,27 @@
 import matplotlib.gridspec as gridspec
 
 
-# Makes a 1 row : 2 column even split (with initial size set to 10x8 (idk what units))
-# left column is TextBox, Image, Slider Controls
-# right column is 6 spectral lines (one for each of the 6 points on the image)
+def clear_axes(ax):
+    ax.set_xticks([])
+    ax.set_xticklabels([])
+    ax.set_yticks([])
+    ax.set_yticklabels([])    
+    ax.set_axis_off()
+    ax.tick_params(labelbottom=False, labelleft=False)
+    return ax
+
+def format_axes(fig):
+    for i, ax in enumerate(fig.axes):
+        ax.text(0.5, 0.5, "ax%d" % (i+1), va="center", ha="center")
+        ax.tick_params(labelbottom=False, labelleft=False)
+
 def make_6speclayout(plt):
+    """
+    Makes a 1 row : 2 column even split (with initial size set to 10x8 (idk what units))
+    left column is TextBox, Image, Slider Controls
+    right column is 6 spectral lines (one for each of the 6 points on the image)
+
+    """
     fig = plt.figure(constrained_layout=True,figsize=(10,8))
     gs0 = fig.add_gridspec(1, 2)
 
@@ -66,12 +83,12 @@ def make_6speclayout(plt):
     fig.tight_layout()
     return ax
 
-
-
-# Makes a 1 row : 2 column even split (with initial size set to 10x8 (idk what units))
-# left column is TextBox, Image, Slider Controls
-# right column is single spectral plot with 
 def make_image_flux_var_layout(plt):
+    """
+    Makes a 1 row : 2 column even split (with initial size set to 10x8 (idk what units))
+    left column is TextBox, Image, Slider Controls
+    right column is single spectral plot with 
+    """
     # fig = plt.figure(constrained_layout=True,figsize=(14,8))
     fig = plt.figure(figsize=(14,8))
     gs0 = fig.add_gridspec(1, 2)
@@ -136,29 +153,18 @@ def make_simple_image_flux_var_layout(plt, image_size=6):
     fig.tight_layout()
     return ax
 
-def make_image_and_12_plots(plt):
+def make_image_and_8_plots(plt, wcs=None):
     gs = gridspec.GridSpec(4, 3)
     # Create a subplot for the image on the left
     ax_text = plt.subplot(gs[0:1, :1]) # text box
     ax_text = clear_axes(ax_text)
-    ax_image = plt.subplot(gs[1:5, :1])
+    if wcs is not None:
+        ax_image = plt.subplot(gs[1:5, :1], projection=wcs)
+    else:
+        ax_image = plt.subplot(gs[1:5, :1])
 
-    # Create 12 subplots on the right for the spectra
+    # Create 8 subplots on the right for the spectra
     ax_spectra = [plt.subplot(gs[i // 2, i % 2 + 1]) for i in range(8)]
 
     plt.tight_layout()
     return ax_text, ax_image, ax_spectra
-
-def clear_axes(ax):
-    ax.set_xticks([])
-    ax.set_xticklabels([])
-    ax.set_yticks([])
-    ax.set_yticklabels([])    
-    ax.set_axis_off()
-    ax.tick_params(labelbottom=False, labelleft=False)
-    return ax
-
-def format_axes(fig):
-    for i, ax in enumerate(fig.axes):
-        ax.text(0.5, 0.5, "ax%d" % (i+1), va="center", ha="center")
-        ax.tick_params(labelbottom=False, labelleft=False)
