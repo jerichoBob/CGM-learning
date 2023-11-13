@@ -13,7 +13,7 @@ import numpy as np
 import bobutils.layout_utils as lu
 import bobutils.utils as bu
 import bobutils.fileio as bio
-
+import bobutils.sightlines as bus
 
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
@@ -100,37 +100,9 @@ def create_mpl_layout(plt, wcs_ref, obs):
     # label_axes(fig)
     return fig, ax_ref_image, ax_obs, ax_combined_spec
 
-def load_sightlines():
-    """"""
-    points = [
-        (29,36, 3), # just doing 1 sightline for now
-        # (29,39,3),    
-        # (32,37,3),
-        # (32,40,3),
-        # (35,39,3),
-        # (38,39,3), 
-        # (50,33,7),
-        # (35,24,7),
-    ]
-    x_coords, y_coords, sizes = zip(*points)
-    # convert to lists
-    x_coords = list(x_coords)
-    y_coords = list(y_coords)
-    sizes    = list(sizes)
-    return x_coords, y_coords, sizes
 
-def radecs_from_sightline_boxes(wcs_ref, pt_xs, pt_ys, szs):
-    """ Converts the sightline box corners to an array of ra,dec tuples"""
-    radecs = []
-    sightline_count = len(pt_xs)
-    for sl_ndx in range(sightline_count): # loop through the sightlines
-        print(f"=== sightline   pt_xs: {pt_xs[sl_ndx]} pt_ys: {pt_ys[sl_ndx]} szs: {szs[sl_ndx]}")
-        xs, ys = bu.box_corners(pt_xs[sl_ndx], pt_ys[sl_ndx], deltax=szs[sl_ndx], deltay=szs[sl_ndx]) #NOTE: still a question whether we should use these for extraction, or just drawing the box against the wl image
-        print(f"=== sightline box corners   xs: {xs} ys: {ys}")
-        radec = wcs_ref.pixel_to_world_values(xs, ys)
-        print(f"radec: {radec}")
-        radecs.append(radec)
-    return radecs
+
+
 
 def show_ref_image(ax, image, title="White Light", xh_lim=None, yh_lim=None):
     ax.imshow(image, origin='lower', interpolation='nearest', cmap=global_cmap, vmin=0)
@@ -244,11 +216,11 @@ def main():
         parser.print_help(sys.stderr)
         sys.exit(1)
     
-    xs, ys, szs = load_sightlines()
-    cnt = len(xs)
+    xs, ys, szs = bus.load_sightlines()
     wl_image, wcs_ref = bio.load_original_cube(global_nb_min, global_nb_max)
-    sl_radecs = radecs_from_sightline_boxes(wcs_ref, xs, ys, szs)
+    sl_radecs = bus.radecs_from_sightline_boxes(wcs_ref, xs, ys, szs)
     obs = bu.get_corrected_kcwi_data(global_nb_min, global_nb_max)
+    slcnt = len(xs)
     ocnt = len(obs)
 
     specs = []
@@ -288,7 +260,7 @@ def main():
     plt.subplots_adjust(left=0.038, bottom=0.057, right=0.917, top=0.929, wspace=0.152, hspace=0.244)
     plt.show()
 
-def show_max_against_obs():
+def show_mask_against_obs():
     xs, ys, szs = load_sightlines()
     cnt = len(xs)
     wl_image, wcs_ref = bio.load_original_cube(global_nb_min, global_nb_max)
@@ -348,5 +320,5 @@ def show_max_against_obs():
 
 if __name__ == "__main__":
     main()
-    # show_max_against_obs()
+    # show_mask_against_obs()
 

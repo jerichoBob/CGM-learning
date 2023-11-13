@@ -1,6 +1,7 @@
 description = """
 Sightline convenience class.
 """
+import utils as bu
 
 class Sightline:
     """Class for managing Sightlines"""
@@ -159,4 +160,35 @@ class Sightline:
         del self._snr
         
     # --- methods -----------------------------------------------
+
+def radecs_from_sightline_boxes(wcs_ref, pt_xs, pt_ys, szs):
+    """ Converts the sightline box corners to an array of ra,dec tuples"""
+    radecs = []
+    sightline_count = len(pt_xs)
+    for sl_ndx in range(sightline_count): # loop through the sightlines
+        print(f"=== sightline   pt_xs: {pt_xs[sl_ndx]} pt_ys: {pt_ys[sl_ndx]} szs: {szs[sl_ndx]}")
+        xs, ys = bu.box_corners(pt_xs[sl_ndx], pt_ys[sl_ndx], deltax=szs[sl_ndx], deltay=szs[sl_ndx]) #NOTE: still a question whether we should use these for extraction, or just drawing the box against the wl image
+        print(f"=== sightline box corners   xs: {xs} ys: {ys}")
+        radec = wcs_ref.pixel_to_world_values(xs, ys)
+        print(f"radec: {radec}")
+        radecs.append(radec)
+    return radecs
     
+def load_sightlines():
+    """ we'll figure out a way to make this more generic, but trying to consolidate the set of sightlines here"""
+    points = [
+        (29,36, 3), # just doing 1 sightline for now
+        # (29,39,3),    
+        # (32,37,3),
+        # (32,40,3),
+        # (35,39,3),
+        # (38,39,3), 
+        # (50,33,7),
+        # (35,24,7),
+    ]
+    x_coords, y_coords, sizes = zip(*points)
+    # convert to lists
+    x_coords = list(x_coords)
+    y_coords = list(y_coords)
+    sizes    = list(sizes)
+    return x_coords, y_coords, sizes

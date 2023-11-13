@@ -103,8 +103,9 @@ def create_fractional_mask(box_corners, shape):
     """
     Create a fractional mask for a given bounding box with subpixel accuracy, handling rotation.
     
-    :param box_corners: The corners of the bounding box (rotated)
-    :param shape: The shape of the 2D array to apply the mask to
+    :param box_corners: The corners of the bounding box (possibly rotated)
+    :param shape: The shape of the 2D array to apply the mask to 
+       - assuming this is the shape of the whitelight image (but could be subset of that)
     :return: A 2D numpy array representing the mask
     """
     mask = np.zeros(shape)
@@ -207,7 +208,7 @@ def simple_extract_rectangle(wave, sub_flux, sub_var):
     """
 
     flux_spec = np.nansum(sub_flux, axis=(1,2))
-    err_spec = np.sqrt(np.sum(sub_var, axis=(1,2)))
+    err_spec = np.sqrt(np.sum(sub_var, axis=(1,2))) # assumes that var is really variance data
 
     # Replace NAN - no warnings
     bad = np.isnan(err_spec)
