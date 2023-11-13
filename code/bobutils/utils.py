@@ -181,7 +181,7 @@ def corrected_corner_define(pt_x, pt_y, flux, var, deltax=5, deltay=5):
     return flux_var_cutout(flux, var, xs, ys)
 
 def combine_spectra_ivw(specs):
-    """Combine the collection of 1D spectra into a single spectrum using inverse variance weighting"""
+    """Combine a collection of 1D spectra into a single spectrum using inverse variance weighting"""
     """See https://en.wikipedia.org/wiki/Inverse-variance_weighting"""
     print(f"# of spectra={len(specs)}")
     fluxlen = len(specs[0].flux)
@@ -198,6 +198,68 @@ def combine_spectra_ivw(specs):
         flux_tot[lndx] = sum_ysigma / sum_1sigma
         var_tot[lndx] = 1.0 / sum_1sigma
 
+    return flux_tot, var_tot, wave_tot
+
+def combine_spectra_ivw2(specs):
+    """ refined implementation of above -- UNTESTED"""
+    """Combine a collection of 1D spectra into a single spectrum using inverse variance weighting"""
+    """assumes all spectra have the same dimensionality, and have .wavelength, .flux and .sig attributes"""
+    n_spectra = len(specs)
+    print(f"# of spectra={n_spectra}")
+    
+    # Assuming all spectra have the same wavelength grid
+    fluxlen = len(specs[0].flux)
+    print(f"fluxlen={fluxlen}")
+    
+    # Extract all fluxes and variances into a 2D array (spectra x wavelength)
+    all_fluxes = np.array([sp.flux for sp in specs])
+    all_variances = np.array([sp.sig ** 2 for sp in specs])  # Squaring the sigmas to get variances
+    
+    # Calculate weights for each wavelength across all spectra
+    weights = 1 / all_variances
+    weighted_fluxes = all_fluxes * weights
+    
+    # Sum along the spectra axis to get weighted sums
+    sum_ysigma = np.sum(weighted_fluxes, axis=0)
+    sum_1sigma = np.sum(weights, axis=0)
+    
+    # Calculate the total flux and variance for each wavelength
+    flux_tot = sum_ysigma / sum_1sigma
+    var_tot = 1 / sum_1sigma
+
+    wave_tot = specs[0].wavelength
+    
+    return flux_tot, var_tot, wave_tot
+
+def combine_spectra_ivw2(specs):
+    """ refined implementation of above -- UNTESTED"""
+    """Combine a collection of 1D spectra into a single spectrum using inverse variance weighting"""
+    """assumes all spectra have the same dimensionality, and have .wavelength, .flux and .sig attributes"""
+    n_spectra = len(specs)
+    print(f"# of spectra={n_spectra}")
+    
+    # Assuming all spectra have the same wavelength grid
+    fluxlen = len(specs[0].flux)
+    print(f"fluxlen={fluxlen}")
+    
+    # Extract all fluxes and variances into a 2D array (spectra x wavelength)
+    all_fluxes = np.array([sp.flux for sp in specs])
+    all_variances = np.array([sp.sig ** 2 for sp in specs])  # Squaring the sigmas to get variances
+    
+    # Calculate weights for each wavelength across all spectra
+    weights = 1 / all_variances
+    weighted_fluxes = all_fluxes * weights
+    
+    # Sum along the spectra axis to get weighted sums
+    sum_ysigma = np.sum(weighted_fluxes, axis=0)
+    sum_1sigma = np.sum(weights, axis=0)
+    
+    # Calculate the total flux and variance for each wavelength
+    flux_tot = sum_ysigma / sum_1sigma
+    var_tot = 1 / sum_1sigma
+
+    wave_tot = specs[0].wavelength
+    
     return flux_tot, var_tot, wave_tot
 
 
@@ -329,23 +391,23 @@ def signal_to_noise2(wave, flux, co_begin=3500, co_end=5500):
     this generally assumes that we are working with a subset or window of the flux produced by 'corrected_corner_define()'
     '''
     
-    # Select the data within this range
-    wave_min = co_begin * u.AA  # Adjust unit as per your data
-    wave_max = co_end * u.AA  # Adjust unit as per your data
-    mask = (wave >= wave_min) & (wave <= wave_max)    
-    selected_flux = flux[mask]
+#     # Select the data within this range
+#     wave_min = co_begin * u.AA  # Adjust unit as per your data
+#     wave_max = co_end * u.AA  # Adjust unit as per your data
+#     mask = (wave >= wave_min) & (wave <= wave_max)    
+#     selected_flux = flux[mask]
 
-    # Compute the mean flux and its standard deviation within this range
-    mean_flux = np.mean(selected_flux, axis=0)
-    stddev_flux = np.std(selected_flux, axis=0)
+#     # Compute the mean flux and its standard deviation within this range
+#     mean_flux = np.mean(selected_flux, axis=0)
+#     stddev_flux = np.std(selected_flux, axis=0)
 
-    # Compute the SNR
-    snr = mean_flux / stddev_flux
-    #..................................................
-    # print(f"mean flux between {wave_min}-{wave_max}: ", mean_flux)
-    # print(f"stddev flux between {wave_min}-{wave_max}: ", stddev_flux)
-    # print(f"snr between {wave_min}-{wave_max}: ", snr)
-    return snr
+#     # Compute the SNR
+#     snr = mean_flux / stddev_flux
+#     #..................................................
+#     # print(f"mean flux between {wave_min}-{wave_max}: ", mean_flux)
+#     # print(f"stddev flux between {wave_min}-{wave_max}: ", stddev_flux)
+#     # print(f"snr between {wave_min}-{wave_max}: ", snr)
+#     return snr
 
 def signal_to_noise3(wave, flux_spec, var_spec, co_begin=3500, co_end=5500):
     """
