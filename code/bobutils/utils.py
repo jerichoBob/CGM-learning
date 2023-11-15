@@ -22,50 +22,35 @@ sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 
 import bobutils.fileio as bio
 
-# This just draws a single box centered at (x,y) and sz from that center point in the n/e/s/w directions 
-def plotbox(plt, x, y, sz, c):
-    ax = x - 0.5
-    ay = y - 0.5
-    plt.plot(
-        [ax, ax,    ax-sz, ax-sz, ax],
-        [ay, ay-sz, ay-sz, ay,    ay],
-        '-', color = c)
 
-def plotcircle(plt, x, y, labels, sz, c):
-  for i in range(len(x)):
-        colour = 'c' #fix it at cyan for now c[i];
-        x_ = x[i]
-        y_ = y[i]
-        plotbox(plt, x_, y_,  1, colour) # center
-        plotbox(plt, x_, y_+1, 1, colour) # north
-        plotbox(plt, x_+1, y_, 1, colour) # east
-        plotbox(plt, x_, y_-1, 1, colour) # south
-        plotbox(plt, x_-1, y_, 1, colour) # west
-
-        plt.text(x[i]-1.5*sz, y[i], labels[i], color=colour)
-
-def box_corners(pt_x, pt_y, deltax=5, deltay=5, qfitsview_correction=-1.5):
+def box_corners(pt_x, pt_y, deltax=5, deltay=5, coord_corr=None):
     """
-    Given a center point (pt_x,pt_y) defined in QFitsView and a box of size (deltax,deltay), 
+    Given a center point (pt_x,pt_y) (possibly defined in QFitsView) and a box of size (deltax,deltay), 
     return x1,x2,y1,y2 of the extraction box
+    - if defined in QFitsView, coord_corr should be -1.5
+    - if not, coord_corr should be -0.5
+    # - - - - - 
+    # NOTE:  to get the right plot alignment when ploting, you need to subtract both x and y by 1.5. WHY?
+    # 1. QFitsView starts in the lower-left corner as 1,1, whereas a python/np array is base 0.
+    # 2. The 0,0 point is at the center of the pixel, not at the lower left hand corner, which adds 0.5 to the coordinates.
     """
     # assumes deltax & deltay are odd
     x_halfbox = (deltax-1)//2
     y_halfbox= (deltay-1)//2
 
-    # - - - - - 
-    # NOTE:  to get the right plot alignment when ploting, you need to subtract both x and y by 1.5. WHY?
-    # 1. QFitsView starts in the lower-left corner as 1,1, whereas a python/np array is base 0.
-    # 2. The 0,0 point is at the center of the pixel, not at the lower left hand corner, 
-    # qfitsview_correction = -1.5
-
-    x1=pt_x-x_halfbox   + qfitsview_correction
-    x2=pt_x+x_halfbox+1 + qfitsview_correction
+    x1=pt_x-x_halfbox  
+    x2=pt_x+x_halfbox+1
+    y1=pt_y-y_halfbox  
+    y2=pt_y+y_halfbox+1
+    
+    if coord_corr is not None:
+        x1+=coord_corr
+        x2+=coord_corr
+        y1+=coord_corr
+        y2+=coord_corr
+        
     xs = [x1,x2]
-
-    y1=pt_y-y_halfbox   + qfitsview_correction
-    y2=pt_y+y_halfbox+1 + qfitsview_correction
-    ys =[y1,y2]
+    ys = [y1,y2]
 
     return xs, ys
 
@@ -200,36 +185,6 @@ def combine_spectra_ivw(specs):
 
     return flux_tot, var_tot, wave_tot
 
-def combine_spectra_ivw2(specs):
-    """ refined implementation of above -- UNTESTED"""
-    """Combine a collection of 1D spectra into a single spectrum using inverse variance weighting"""
-    """assumes all spectra have the same dimensionality, and have .wavelength, .flux and .sig attributes"""
-    n_spectra = len(specs)
-    print(f"# of spectra={n_spectra}")
-    
-    # Assuming all spectra have the same wavelength grid
-    fluxlen = len(specs[0].flux)
-    print(f"fluxlen={fluxlen}")
-    
-    # Extract all fluxes and variances into a 2D array (spectra x wavelength)
-    all_fluxes = np.array([sp.flux for sp in specs])
-    all_variances = np.array([sp.sig ** 2 for sp in specs])  # Squaring the sigmas to get variances
-    
-    # Calculate weights for each wavelength across all spectra
-    weights = 1 / all_variances
-    weighted_fluxes = all_fluxes * weights
-    
-    # Sum along the spectra axis to get weighted sums
-    sum_ysigma = np.sum(weighted_fluxes, axis=0)
-    sum_1sigma = np.sum(weights, axis=0)
-    
-    # Calculate the total flux and variance for each wavelength
-    flux_tot = sum_ysigma / sum_1sigma
-    var_tot = 1 / sum_1sigma
-
-    wave_tot = specs[0].wavelength
-    
-    return flux_tot, var_tot, wave_tot
 
 def combine_spectra_ivw2(specs):
     """ refined implementation of above -- UNTESTED"""
@@ -325,64 +280,6 @@ def extract_spectra(flux_files, var_files, ra, dec, box_size):
     spec, var, wave = combine_spectra_ivw(specs)            
     return spec, var, wave
 
-def extract_spectra_from_observations(sl_radec, observations):
-    """
-    Extracts a combined spectra from the collection of observations, contained within the sl_radec box.   
-    ie. observations = [class Observation, class Observation, ...]
-    params:
-        * observations: an list of Observation objects
-        * sl_radec[0]: the ras of the extraction box
-        * sl_radec[1]: the decs of the extraction box
-    
-    returns: 
-        * XSpectrum1D flux and variance objects
-    """
-    specs = []
-    ras = sl_radec[0]
-    decs = sl_radec[1]
-    print("=-"*40)
-    print(f"=============== BEGINNING EXTRACTION FOR RA:{ras[0]} DEC:{decs[0]} ==================")
-    for ob in observations:
-        # hdr_f, flux, hdr_v, var, wave, flux_file = o
-        wcs_cur = WCS(ob.hdr_f).celestial
-        xs, ys = wcs_cur.world_to_pixel_values(ras, decs)
-        print(f"ras={ras}, decs={decs} --> xs={xs}, ys={ys}")
-        print(f"before xs={xs}, ys={ys}")
-
-        handle_fractional_pixel = True
-        if handle_fractional_pixel:
-            # we can handle extraction of fractional pixels
-            sp = fractional_flux_var_spectra(ob.wave, ob.flux, ob.var, xs, ys)
-
-        else:
-            xs = np.round(xs)
-            ys = np.round(ys)
-
-            hb = box_size // 2
-
-            flux_cut = ob.flux[:, yc[0]-hb:yc[0]+hb+1, xc[0]-hb:xc[0]+hb+1]
-            var_cut  =  ob.var[:, yc[0]-hb:yc[0]+hb+1, xc[0]-hb:xc[0]+hb+1]
-
-        # xs = np.round(xs)
-        # ys = np.round(ys)
-        # print(f"after xs={xs}, ys={ys}")        
-        # _, _, flux_cut, var_cut = corrected_corner_define(xc, yc, flux, var, deltax=box_size, deltay=box_size)
-
-        # print(f"flux_cut.shape={flux_cut.shape}")
-        # print(f"var_cut.shape={var_cut.shape}")
-
-        # # extract the weighted spectrum and variance
-        with warnings.catch_warnings():
-        #     # Ignore model linearity warning from the fitter
-            warnings.simplefilter('ignore')
-            warnings.simplefilter('ignore', AstropyWarning)
-        #     # sp = ke.extract_weighted_spectrum(flux_cut, var_cut, ob.wave, weights='Data')
-            sp = simple_extract_rectangle(ob.wave, flux_cut, var_cut)
-
-        specs.append(sp)
-    
-    spec, var, wave = combine_spectra_ivw(specs)            
-    return spec, var, wave
 
 def signal_to_noise2(wave, flux, co_begin=3500, co_end=5500):
     '''
@@ -391,23 +288,23 @@ def signal_to_noise2(wave, flux, co_begin=3500, co_end=5500):
     this generally assumes that we are working with a subset or window of the flux produced by 'corrected_corner_define()'
     '''
     
-#     # Select the data within this range
-#     wave_min = co_begin * u.AA  # Adjust unit as per your data
-#     wave_max = co_end * u.AA  # Adjust unit as per your data
-#     mask = (wave >= wave_min) & (wave <= wave_max)    
-#     selected_flux = flux[mask]
+    # Select the data within this range
+    wave_min = co_begin * u.AA  # Adjust unit as per your data
+    wave_max = co_end * u.AA  # Adjust unit as per your data
+    mask = (wave >= wave_min) & (wave <= wave_max)    
+    selected_flux = flux[mask]
 
-#     # Compute the mean flux and its standard deviation within this range
-#     mean_flux = np.mean(selected_flux, axis=0)
-#     stddev_flux = np.std(selected_flux, axis=0)
+    # Compute the mean flux and its standard deviation within this range
+    mean_flux = np.mean(selected_flux, axis=0)
+    stddev_flux = np.std(selected_flux, axis=0)
 
-#     # Compute the SNR
-#     snr = mean_flux / stddev_flux
-#     #..................................................
-#     # print(f"mean flux between {wave_min}-{wave_max}: ", mean_flux)
-#     # print(f"stddev flux between {wave_min}-{wave_max}: ", stddev_flux)
-#     # print(f"snr between {wave_min}-{wave_max}: ", snr)
-#     return snr
+    # Compute the SNR
+    snr = mean_flux / stddev_flux
+    #..................................................
+    # print(f"mean flux between {wave_min}-{wave_max}: ", mean_flux)
+    # print(f"stddev flux between {wave_min}-{wave_max}: ", stddev_flux)
+    # print(f"snr between {wave_min}-{wave_max}: ", snr)
+    return snr
 
 def signal_to_noise3(wave, flux_spec, var_spec, co_begin=3500, co_end=5500):
     """
@@ -438,20 +335,6 @@ def signal_to_noise3(wave, flux_spec, var_spec, co_begin=3500, co_end=5500):
     snr = np.sum(flux_range) / np.sqrt(np.sum(variance_range))
     return snr
 
-
-def plot_sightlines_wcs(mpl_ax, target_wcs, radecs, color='w-', lw=0.5, show_label=True):
-    """ this isn't quite right yet. need to figure out how ras and decs are packed """
-    for i in range(len(radecs)):
-        ras, decs = radecs[i] # ras and decs define the edges of the extraction box
-        ax, ay = target_wcs.world_to_pixel_values(ras[1], decs[1])  
-        bx, by = target_wcs.world_to_pixel_values(ras[0], decs[1])
-        cx, cy = target_wcs.world_to_pixel_values(ras[0], decs[0])
-        dx, dy = target_wcs.world_to_pixel_values(ras[1], decs[0]) 
-        mpl_ax.plot([ax, bx, cx, dx, ax], 
-                    [ay, by, cy, dy, ay], color, lw=lw)
-        if show_label:
-            mpl_ax.text(ax-1, ay-1, str(i), color='w', fontsize = 14, ha='center', va='center')
-
 def sig_figs(x: float, precision: int):
     """
     Rounds a number to number of significant figures
@@ -469,21 +352,4 @@ def sig_figs(x: float, precision: int):
 
     return round(x, -int(floor(log10(abs(x)))) + (precision - 1))
 
-def get_corrected_kcwi_data(narrowband_min, narrowband_max):
-    """ returns an array of Observation objects (after a few tweaks)"""
-    ob_array = bio.load_observations()
 
-    for ob in ob_array:
-        ob.wcs_f = WCS(ob.hdr_f).celestial
-
-        # Removing all the NaNs from the flux cube before making white-light or narrow-band image
-        q_nan = np.isnan(ob.flux) 
-        ob.flux[q_nan] = 0.0
-
-        ob.wl_k = im.build_whitelight(ob.hdr_f, ob.flux, minwave=narrowband_min, maxwave=narrowband_max)
-
-        # Loading the variance cube from index 2 of the KCWI fits file
-        ob.wcs_v = WCS(ob.hdr_v).celestial # The WCS of the variance cube
-
-
-    return ob_array

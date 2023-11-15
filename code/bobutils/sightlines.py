@@ -2,22 +2,25 @@ description = """
 Sightline convenience class.
 """
 import utils as bu
+import numpy as np
 
 class Sightline:
     """Class for managing Sightlines"""
-    def __init__(self, x=None, y=None, disp_x=None, disp_y=None, radius=None, box_width=None, box_height=None, 
-                 color=None, label_alignment=None, snr=None):
+    def __init__(self, x=None, y=None, w=None, h=None, color=None, radecs=[],
+                 label_alignment=None, snr=None, label=None):
         self._x = x
         self._y = y
-        self._disp_x = disp_x
-        self._disp_y = disp_y
-        self._radius = radius
-        self._box_width = box_width
-        self._box_height = box_height
+        self._w = w
+        self._h = h
         self._color = color
+        self._label = label
         self._label_alignment = label_alignment
-        self._snr = snr
+        self._radecs = radecs
 
+        self._snr = snr
+        
+    def __repr__(self):
+        return f"""Sightline {self.label}: x={self.x}, y={self.y}, w={self.w}, h={self.h}, radecs={self.radecs} """
 
     # --- x -----------------------------------------------
     @property
@@ -89,33 +92,33 @@ class Sightline:
     def radius(self):
         del self._radius
         
-    # --- box_width -----------------------------------------------
+    # --- w -----------------------------------------------
     @property
-    def box_width(self):
-        """Get the 'box_width' property."""
-        return self._box_width
+    def w(self):
+        """Get the 'w' property."""
+        return self._w
     
-    @box_width.setter
-    def box_width(self, value):
-        self._box_width = value
+    @w.setter
+    def w(self, value):
+        self._w = value
         
-    @box_width.deleter
-    def box_width(self):
-        del self._box_width
+    @w.deleter
+    def w(self):
+        del self._w
         
-    # --- box_height -----------------------------------------------
+    # --- h -----------------------------------------------
     @property
-    def box_height(self):
-        """Get the 'box_height' property."""
-        return self._box_height
+    def h(self):
+        """Get the 'h' property."""
+        return self._h
 
-    @box_height.setter
-    def box_height(self, value):
-        self._box_height = value
+    @h.setter
+    def h(self, value):
+        self._h = value
         
-    @box_height.deleter
-    def box_height(self):
-        del self._box_height
+    @h.deleter
+    def h(self):
+        del self._h
         
     # --- color -----------------------------------------------
     @property
@@ -159,22 +162,48 @@ class Sightline:
     def snr(self):
         del self._snr
         
-    # --- methods -----------------------------------------------
+    # --- label -----------------------------------------------
+    @property
+    def label(self):
+        """Get the 'label' property."""
+        return self._label
+    
+    @label.setter
+    def label(self, value):
+        self._label = value
+        
+    @label.deleter
+    def label(self):
+        del self._label
+    # --- radecs -----------------------------------------------
+    @property
+    def radecs(self):
+        """Get the 'radecs' property."""
+        return self._radecs
+    
+    @radecs.setter
+    def radecs(self, value):
+        self._radecs = value
+        
+    @radecs.deleter
+    def radecs(self):
+        del self._radecs
 
-def radecs_from_sightline_boxes(wcs_ref, pt_xs, pt_ys, szs):
+
+def add_radec_to_sightlines(wcs_ref, sightlines):
     """ Converts the sightline box corners to an array of ra,dec tuples"""
     radecs = []
-    sightline_count = len(pt_xs)
-    for sl_ndx in range(sightline_count): # loop through the sightlines
-        print(f"=== sightline   pt_xs: {pt_xs[sl_ndx]} pt_ys: {pt_ys[sl_ndx]} szs: {szs[sl_ndx]}")
-        xs, ys = bu.box_corners(pt_xs[sl_ndx], pt_ys[sl_ndx], deltax=szs[sl_ndx], deltay=szs[sl_ndx]) #NOTE: still a question whether we should use these for extraction, or just drawing the box against the wl image
-        print(f"=== sightline box corners   xs: {xs} ys: {ys}")
-        radec = wcs_ref.pixel_to_world_values(xs, ys)
-        print(f"radec: {radec}")
-        radecs.append(radec)
-    return radecs
+    for sl in sightlines: # loop through the sightlines
+
+        # print(f"=== sightline #{sl_ndx}   x: {x} y: {y} w: {w} h: {h}")
+        xs, ys = bu.box_corners(sl.x, sl.y, deltax=sl.w, deltay=sl.h,coord_corr=None)
+        # print(f"=== extraction box corners   xs: {xs} ys: {ys}")
+        radecs = wcs_ref.pixel_to_world_values(xs, ys)
+        # print(f"radec: {radec}")
+        sl.radecs = radecs # [[ra_min, ra_max], [dec_min, dec_max]]
+    return sightlines
     
-def load_sightlines():
+def load_OLD_sightlines():
     """ we'll figure out a way to make this more generic, but trying to consolidate the set of sightlines here"""
     points = [
         (29,36, 3), # just doing 1 sightline for now
@@ -192,3 +221,46 @@ def load_sightlines():
     y_coords = list(y_coords)
     sizes    = list(sizes)
     return x_coords, y_coords, sizes
+
+def load_231113_sightlines():
+    sightlines = []
+    
+    sightlines.append(Sightline(x=27, y=36, w=3, h=9, label="1"))
+    sightlines.append(Sightline(x=30, y=37, w=3, h=11, label="2"))
+    sightlines.append(Sightline(x=33, y=38, w=3, h=11, label="3"))
+    sightlines.append(Sightline(x=36, y=39, w=3, h=11, label="4"))
+    sightlines.append(Sightline(x=40, y=39, w=5, h=7, label="5"))
+    
+    sightlines.append(Sightline(x=49, y=31, w=11, h=7, label="6"))
+    sightlines.append(Sightline(x=34, y=23, w=11, h=7, label="7"))
+    
+    return sightlines
+
+def get_xywhs(sightlines):
+    """ returns the x,y,w,h of the sightlines"""
+    points = []
+    for sl in sightlines:
+        points.append((sl.x, sl.y, sl.w, sl.h))
+    xs, ys, ws, hs = zip(*points)
+    # convert to lists
+    xs = list(xs)
+    ys = list(ys)
+    ws = list(ws)
+    hs = list(hs)
+    return xs, ys, ws, hs
+
+def world_to_pixel_int(wcs, ra, dec):
+    x, y = wcs.world_to_pixel_values(ra, dec)  
+    x=int(abs(np.rint(x)))
+    y=int(abs(np.rint(y)))
+    return x, y
+
+def sightline_cuts(sl, wcs):
+    """for the sightline passed in, calculate the x and y cuts to be used when cutting the flux and var cubes"""
+    ras = sl.radecs[0]
+    decs = sl.radecs[1]
+    
+    x_min, y_min = world_to_pixel_int(wcs, ras[0], decs[0])
+    x_max, y_max = world_to_pixel_int(wcs, ras[1], decs[1])
+    
+    return x_min, x_max, y_min, y_max

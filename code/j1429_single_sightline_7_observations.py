@@ -14,6 +14,7 @@ import bobutils.layout_utils as lu
 import bobutils.utils as bu
 import bobutils.fileio as bio
 import bobutils.sightlines as bus
+import bobutils.observations as bo
 
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
@@ -28,6 +29,8 @@ import warnings
 warnings.simplefilter('ignore')
 warnings.filterwarnings('ignore', category=FITSFixedWarning)
 
+
+# globals
 global_nb_min = 4676. 
 global_nb_max = 4696. 
 global_cmap = 'gnuplot'
@@ -121,31 +124,6 @@ def show_ref_image(ax, image, title="White Light", xh_lim=None, yh_lim=None):
     ax.grid()
 
 
-def extract_spectra_from_obs(sl_radec, observations):
-    """
-    Extracts (but doesn't combine) spectra from the collection of observations, contained within the sl_radec box.   
-    ie. observations = [class Observation, class Observation, ...]
-    params:
-        * observations: an list of Observation objects
-        * sl_radec[0]: the ras of the extraction box
-        * sl_radec[1]: the decs of the extraction box
-    
-    returns: 
-        * XSpectrum1D flux and variance objects
-    """
-    specs = []
-    ras = sl_radec[0]
-    decs = sl_radec[1]
-    print("=-"*40)
-    print(f"=============== BEGINNING EXTRACTION FOR RA:{ras[0]} DEC:{decs[0]} ==================")
-    for ob in observations:
-        # hdr_f, flux, hdr_v, var, wave, flux_file = ob
-        wcs_cur = WCS(ob.hdr_f).celestial
-        xs, ys = wcs_cur.world_to_pixel_values(ras, decs)
-        print(f"ras={ras}, decs={decs}  -->  xs={xs}, ys={ys}")
-        sp = bu.fractional_flux_var_spectra(ob.wave, ob.flux, ob.var, xs, ys)
-        specs.append(sp)
-    return specs
 
 def show_combined_spectra(ax_spec, combined, color_sightline='blue', color_error='red', color_snr='k', co_begin=4864, co_end=4914, xs=[], ys=[], szs=[]):
     """ show all of the sightline spectra on their own axes """
@@ -229,7 +207,7 @@ def main():
     fig.suptitle(f"J1429+1202 Single Sightline Extraction", fontsize=16)
 
     sl_radec = sl_radecs[0] # let's plot for the first sightline only
-    specs = extract_spectra_from_obs(sl_radec, obs)
+    specs = bo.extract_spectra_from_obs(sl_radec, obs)
     combined = bu.combine_spectra_ivw(specs)            
 
     show_ref_image(ax_ref_image, wl_image)

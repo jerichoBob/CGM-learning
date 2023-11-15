@@ -52,3 +52,61 @@ def apply_fractional_mask_to_cubes(flux_cube, variance_cube, mask):
     
     return flux_spectrum, variance_spectrum
 
+def extract_spectra_from_observations(sl_radec, observations):
+    """
+    Extracts a combined spectra from the collection of observations, contained within the sl_radec box.   
+    ie. observations = [class Observation, class Observation, ...]
+    params:
+        * observations: an list of Observation objects
+        * sl_radec[0]: the ras of the extraction box
+        * sl_radec[1]: the decs of the extraction box
+    
+    returns: 
+        * XSpectrum1D flux and variance objects
+    """
+    specs = []
+    ras = sl_radec[0]
+    decs = sl_radec[1]
+    print("=-"*40)
+    print(f"=============== BEGINNING EXTRACTION FOR RA:{ras[0]} DEC:{decs[0]} ==================")
+    for ob in observations:
+        # hdr_f, flux, hdr_v, var, wave, flux_file = o
+        wcs_cur = WCS(ob.hdr_f).celestial
+        xs, ys = wcs_cur.world_to_pixel_values(ras, decs)
+        print(f"ras={ras}, decs={decs} --> xs={xs}, ys={ys}")
+        print(f"before xs={xs}, ys={ys}")
+
+        handle_fractional_pixel = True
+        if handle_fractional_pixel:
+            # we can handle extraction of fractional pixels
+            sp = fractional_flux_var_spectra(ob.wave, ob.flux, ob.var, xs, ys)
+
+        else:
+            xs = np.round(xs)
+            ys = np.round(ys)
+
+            hb = box_size // 2
+
+            flux_cut = ob.flux[:, yc[0]-hb:yc[0]+hb+1, xc[0]-hb:xc[0]+hb+1]
+            var_cut  =  ob.var[:, yc[0]-hb:yc[0]+hb+1, xc[0]-hb:xc[0]+hb+1]
+
+            # xs = np.round(xs)
+            # ys = np.round(ys)
+            # print(f"after xs={xs}, ys={ys}")        
+            # _, _, flux_cut, var_cut = corrected_corner_define(xc, yc, flux, var, deltax=box_size, deltay=box_size)
+
+            # print(f"flux_cut.shape={flux_cut.shape}")
+            # print(f"var_cut.shape={var_cut.shape}")
+
+            # # extract the weighted spectrum and variance
+            with warnings.catch_warnings():
+            #     # Ignore model linearity warning from the fitter
+                warnings.simplefilter('ignore')
+                warnings.simplefilter('ignore', AstropyWarning)
+            #     # sp = ke.extract_weighted_spectrum(flux_cut, var_cut, ob.wave, weights='Data')
+                sp = simple_extract_rectangle(ob.wave, flux_cut, var_cut)
+
+            specs.append(sp)
+    
+    spec, var, wave = combine_spectra_ivw(specs)            
+    return spec, var, wave

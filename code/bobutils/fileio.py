@@ -114,3 +114,22 @@ def load_original_cube(nb_min, nb_max):
 
     wl_image = im.build_whitelight(hdr, flux, minwave=nb_min, maxwave=nb_max)
     return wl_image, wcs
+
+def get_corrected_kcwi_data(narrowband_min, narrowband_max):
+    """ returns an array of Observation objects (after a few tweaks)"""
+    ob_array = load_observations()
+
+    for ob in ob_array:
+        ob.wcs_f = WCS(ob.hdr_f).celestial
+
+        # Removing all the NaNs from the flux cube before making white-light or narrow-band image
+        q_nan = np.isnan(ob.flux) 
+        ob.flux[q_nan] = 0.0
+
+        ob.wl_k = im.build_whitelight(ob.hdr_f, ob.flux, minwave=narrowband_min, maxwave=narrowband_max)
+
+        # Loading the variance cube from index 2 of the KCWI fits file
+        ob.wcs_v = WCS(ob.hdr_v).celestial # The WCS of the variance cube
+
+
+    return ob_array
