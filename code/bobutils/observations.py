@@ -206,12 +206,12 @@ def extract_spectra_from_obs(sl_radec, observations):
     specs = []
     ras = sl_radec[0]
     decs = sl_radec[1]
-    print("=-"*40)
+    # print("=-"*40)
     print(f"=============== BEGINNING EXTRACTION FOR RA:{ras[0]} DEC:{decs[0]} ==================")
     for ob in observations:    
         x_min, y_min = bus.world_to_pixel_int(ob.wcs_f, ras[0], decs[0])
         x_max, y_max = bus.world_to_pixel_int(ob.wcs_f, ras[1], decs[1])
-        print(f"ras={ras}, decs={decs}  -->  x_min={x_min}, x_max={x_max}   y_min={y_min}, y_max={y_max}")
+        # print(f"ras={ras}, decs={decs}  -->  x_min={x_min}, x_max={x_max}   y_min={y_min}, y_max={y_max}")
         flux_cut = ob.flux[:, y_min:y_max, x_min:x_max]
         var_cut  =  ob.var[:, y_min:y_max, x_min:x_max]
         # extract the weighted spectrum and variance

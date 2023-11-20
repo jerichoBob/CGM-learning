@@ -154,7 +154,7 @@ def fractional_flux_var_spectra(wave, flux, var, xs, ys):
     print("="*40)
 
     # Create and return XSpectrum1D
-    return XSpectrum1D.from_tuple((wave, weighted_flux, weighted_var))
+    return XSpectrum1D.from_tuple((wave, weighted_flux, -this_us_wrong_it_should_be_sig)) # NOTE: ituple : (wave,flux), (wave,flux,sig) or (wave,flux,sig,cont)
     
 
 def corrected_corner_define(pt_x, pt_y, flux, var, deltax=5, deltay=5):
@@ -187,7 +187,7 @@ def combine_spectra_ivw(specs):
 
 
 def combine_spectra_ivw2(specs):
-    """ refined implementation of above -- UNTESTED"""
+    """ refined implementation of above - uses numpy arrays and is much faster"""
     """Combine a collection of 1D spectra into a single spectrum using inverse variance weighting"""
     """assumes all spectra have the same dimensionality, and have .wavelength, .flux and .sig attributes"""
     n_spectra = len(specs)
@@ -199,10 +199,10 @@ def combine_spectra_ivw2(specs):
     
     # Extract all fluxes and variances into a 2D array (spectra x wavelength)
     all_fluxes = np.array([sp.flux for sp in specs])
-    all_variances = np.array([sp.sig ** 2 for sp in specs])  # Squaring the sigmas to get variances
+    all_vars = np.array([sp.sig ** 2 for sp in specs])  # Squaring the sigmas (aka. stddev) to get variances
     
     # Calculate weights for each wavelength across all spectra
-    weights = 1 / all_variances
+    weights = 1 / all_vars # weights are the inverse of the variances
     weighted_fluxes = all_fluxes * weights
     
     # Sum along the spectra axis to get weighted sums
@@ -210,12 +210,20 @@ def combine_spectra_ivw2(specs):
     sum_1sigma = np.sum(weights, axis=0)
     
     # Calculate the total flux and variance for each wavelength
-    flux_tot = sum_ysigma / sum_1sigma
-    var_tot = 1 / sum_1sigma
-
-    wave_tot = specs[0].wavelength
+    wave = specs[0].wavelength
+    flux = sum_ysigma / sum_1sigma
+    var = 1 / sum_1sigma
+    err = np.sqrt(var)
     
-    return flux_tot, var_tot, wave_tot
+    # print(f"wave.shape={wave.shape}")
+    # print(f"flux.shape={flux.shape}")
+    # print(f"err.shape={err.shape}")
+    # print("="*40)
+    # print(f"wave={wave}")
+    # print(f"flux={flux}")
+    # print(f"err={err}")
+    # print("="*40)
+    return XSpectrum1D.from_tuple((wave, flux, err)) 
 
 
 def simple_extract_rectangle(wave, sub_flux, sub_var):
