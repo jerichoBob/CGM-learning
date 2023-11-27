@@ -202,7 +202,8 @@ def combine_spectra_ivw2(specs):
     all_vars = np.array([sp.sig ** 2 for sp in specs])  # Squaring the sigmas (aka. stddev) to get variances
     
     # Calculate weights for each wavelength across all spectra
-    weights = 1 / all_vars # weights are the inverse of the variances
+    weights = 1 / all_vars # weights are the inverse of the variancesa
+    # NOTE: if in sightline 6 and observation is 0 or 7, within the wavelength window, make the weight 0 (or really small)
     weighted_fluxes = all_fluxes * weights
     
     # Sum along the spectra axis to get weighted sums
@@ -215,14 +216,6 @@ def combine_spectra_ivw2(specs):
     var = 1 / sum_1sigma
     err = np.sqrt(var)
     
-    # print(f"wave.shape={wave.shape}")
-    # print(f"flux.shape={flux.shape}")
-    # print(f"err.shape={err.shape}")
-    # print("="*40)
-    # print(f"wave={wave}")
-    # print(f"flux={flux}")
-    # print(f"err={err}")
-    # print("="*40)
     return XSpectrum1D.from_tuple((wave, flux, err)) 
 
 
