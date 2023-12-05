@@ -38,7 +38,7 @@ cd ~/School/github_repos # or wherever you have your local github repos
 # clone the needful
 git clone https://github.com/rongmon/rbcodes.git
 git clone https://github.com/pypeit/kcwitools.git
-git clone https://github.com/linetools/linetools.git
+git clone https://github.com/linetools/linetools.git (NOTE: there is a conda installer for linetools now!!!)
 ```
 
 And finally, install all the things ...
