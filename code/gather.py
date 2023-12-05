@@ -106,7 +106,7 @@ def label_pages(label: str, content_pdf: Path, writer: PdfWriter):
 
 def get_sightline_from_path(path: str) -> Union[str, None]:
     """Extract the sightline from the path."""
-    sightline_match = re.search(r'j\d+/(\d+)_', path)
+    sightline_match = re.search(r'[\w\d\_\+]+/(\d+)_', path)
     if sightline_match:
         sightline = sightline_match.group(1)
     else:
@@ -157,11 +157,14 @@ parser = argparse.ArgumentParser(
                     prog='pather.py',
                     formatter_class=argparse.RawDescriptionHelpFormatter,
                     description="""
-This will serve as the tool to gather together all of the analysis distributed across the various folders within analysis/j1429.
+This tool gathers together the analysis distributed across various folders within `basedir``.
 
 Example usage:
-    python gather.py -d analysis/j1429 -p
-    >>> 
+# gather all PDFs and pretty print the list of gathered PDFs
+    python gather.py -d analysis/j1429 -p -pp
+    
+# gather all PDFs and merge them into a single PDF file     
+    python gather.py -d analysis/j1429 -p -m 
 
 """, 
                     # epilog='----'

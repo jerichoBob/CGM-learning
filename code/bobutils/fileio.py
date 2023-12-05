@@ -58,12 +58,18 @@ def read_and_prep_flux_var_data(flux_file, var_file, minwave, maxwave, ybot, yto
     else:
         stddev = np.sqrt(var)
     
-    # print(f"hdr_v: {hdr_v}")
-
-    # if we are going to crop the data, we need to modify the header so that everything tracks correctly
-    # flux = flux[slices,int(ybot):int(ytop),:] # NOTE: Cropping is busted.  Need to fix this.
-    # var  =  var[slices,int(ybot):int(ytop),:] # NOTE: Cropping is busted.  Need to fix this.
-    # print(f"cropped flux.shape={flux.shape}") # (slices, y, x)
+    # Identifying the corrupt wavelength range and masking
+    filter_data = True
+    if filter_data:
+        wmin = 4815.0 #4821.0
+        wmax = 4835.0 #4829.0
+        corrupt_range = (wave >= wmin) & (wave <= wmax)
+        print("*"*40)
+        corrupt_indices = np.where(corrupt_range)[0]  # [0] to get the indices from the tuple
+        print(f"corrupt_indices: {corrupt_indices}")
+        flux[corrupt_range, :, :] = np.where(flux[corrupt_range, :, :] < 0, np.nan, flux[corrupt_range, :, :])
+        var[corrupt_range, :, :] = np.where(flux[corrupt_range, :, :] < 0, np.nan, var[corrupt_range, :, :])
+    
     
     return Observation(hdr_f=hdr_f, flux=flux, hdr_v=hdr_v, var=var, wave=wave, flux_file=flux_file, stddev=stddev)
 
