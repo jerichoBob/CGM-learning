@@ -18,7 +18,7 @@ sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 
 from observations import Observation
 
-base_path = "/Users/robertseaton/Desktop/Physics-NCState/---Research/Analysis/J1429"
+base_path = "/Users/robertseaton/School/Physics-NCState/---Research/Analysis/J1429"
 reference_flux_filename = f"{base_path}/J1429+1202_KCWI_corrected_flux.fits"
 
 def find_fits(basedir, endswith):
@@ -33,7 +33,10 @@ def find_files_ending_with(dir, endswith):
     return [os.path.join(dir, file) for file in files if file.endswith(endswith)]
 
 def read_and_prep_flux_var_data(flux_file, var_file, minwave, maxwave, ybot, ytop):
-    """ This method reads the flux and var cubes for a specific observation, and cleans them up before returning a new Observation object"""
+    """ 
+    This method reads the flux and var cubes for a specific observation, 
+    and cleans them up before returning a new Observation object
+    """
     hdr_f, flux = open_kcwi_cube(flux_file)
     hdr_v, var = open_kcwi_cube(var_file)
     wave = build_wave(hdr_f)
@@ -61,20 +64,27 @@ def read_and_prep_flux_var_data(flux_file, var_file, minwave, maxwave, ybot, yto
     # Identifying the corrupt wavelength range and masking
     filter_data = True
     if filter_data:
+        """ noise in this wavelength range needs to be filtered out """
         wmin = 4815.0 #4821.0
         wmax = 4835.0 #4829.0
         corrupt_range = (wave >= wmin) & (wave <= wmax)
-        print("*"*40)
+        # print("*"*40)
         corrupt_indices = np.where(corrupt_range)[0]  # [0] to get the indices from the tuple
-        print(f"corrupt_indices: {corrupt_indices}")
+        # print(f"corrupt_indices: {corrupt_indices}")
         flux[corrupt_range, :, :] = np.where(flux[corrupt_range, :, :] < 0, np.nan, flux[corrupt_range, :, :])
         var[corrupt_range, :, :] = np.where(flux[corrupt_range, :, :] < 0, np.nan, var[corrupt_range, :, :])
-    
-    
-    return Observation(hdr_f=hdr_f, flux=flux, hdr_v=hdr_v, var=var, wave=wave, flux_file=flux_file, stddev=stddev)
+        # print("*"*40)
+    np.nan_to_num(flux, copy=False, nan=0.0)
+    np.nan_to_num(var, copy=False, nan=0.0)
+    ob = Observation(hdr_f=hdr_f, flux=flux, hdr_v=hdr_v, var=var, wave=wave, flux_file=flux_file, stddev=stddev)
+    # print(f"ob.flux_file: {ob.flux_file}")
+    return ob
 
 def load_observations():
-    """returns a set of ready-to-use (hdr, flux, var, wave) observation data"""
+    """
+    returns a set of ready-to-use (hdr, flux, var, wave) observation data
+    The "observations" directory contains the astrometry-corrected flux and variance cubes for 7 observations of J1429+1202
+    """
     o_dir = base_path+"/observations"
 
     flux_file_ends_with = "_icubes_corrected_flux.fits"
@@ -99,12 +109,13 @@ def load_observations():
     
         minwave = 3500.
         maxwave = 5500.
-
-        observations.append(read_and_prep_flux_var_data(ffile, vfile, minwave, maxwave, ybot, ytop))
+        
+        ob = read_and_prep_flux_var_data(ffile, vfile, minwave, maxwave, ybot, ytop)
+        observations.append(ob)
 
     return observations
 
-def load_original_cube(nb_min, nb_max):
+def load_narrowband_reference_image(nb_min, nb_max):
     """ 
     The assumption for this function is that we're only using this as a reference for the sightlines.
     The actual extraction is performed on the 7 observational cubes.
@@ -126,16 +137,19 @@ def get_corrected_kcwi_data(narrowband_min, narrowband_max):
     ob_array = load_observations()
 
     for ob in ob_array:
-        ob.wcs_f = WCS(ob.hdr_f).celestial
+        ob.wcs_flux = WCS(ob.hdr_f).celestial
 
         # Removing all the NaNs from the flux cube before making white-light or narrow-band image
         q_nan = np.isnan(ob.flux) 
         ob.flux[q_nan] = 0.0
+        
+        q_nan = np.isnan(ob.var) 
+        ob.var[q_nan] = 9999
 
-        ob.wl_k = im.build_whitelight(ob.hdr_f, ob.flux, minwave=narrowband_min, maxwave=narrowband_max)
+        ob.wl = im.build_whitelight(ob.hdr_f, ob.flux, minwave=narrowband_min, maxwave=narrowband_max)
 
         # Loading the variance cube from index 2 of the KCWI fits file
-        ob.wcs_v = WCS(ob.hdr_v).celestial # The WCS of the variance cube
+        ob.wcs_var = WCS(ob.hdr_v).celestial # The WCS of the variance cube
 
 
     return ob_array

@@ -236,7 +236,7 @@ def main():
     
     ================= Loading Reference Image =================
     """)    
-    wl_image, wcs_ref = bio.load_original_cube(global_nb_min, global_nb_max)
+    wl_image, wcs_ref = bio.load_narrowband_reference_image(global_nb_min, global_nb_max)
     print("""
     
     ================= Computing Extraction Box RA/DECs =================

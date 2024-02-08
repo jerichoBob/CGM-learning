@@ -64,8 +64,6 @@ def flux_var_cutout(flux, var, xs, ys):
     print(f"flux_var_cutout x0:{x0}, x1:{x1}, y0:{y0}, y1:{y1}")
     return flux[:, y0:y1, x0:x1], var[:, y0:y1, x0:x1] # axis0 = lambda, axis1 = y, axis2 = x
 
-
-
 def calc_overlap_area(box_corners, pixel_corners):
     """
     Calculate the area of overlap between the extraction box and a pixel.
@@ -81,7 +79,6 @@ def calc_overlap_area(box_corners, pixel_corners):
     # Calculate the area of overlap
     overlap_area = box_poly.intersection(pixel_poly).area
     return overlap_area
-
 
 # Let's redefine the create_fractional_mask_rotated function to correctly calculate the weights
 def create_fractional_mask(box_corners, shape):
@@ -168,9 +165,9 @@ def corrected_corner_define(pt_x, pt_y, flux, var, deltax=5, deltay=5):
 def combine_spectra_ivw(specs):
     """Combine a collection of 1D spectra into a single spectrum using inverse variance weighting"""
     """See https://en.wikipedia.org/wiki/Inverse-variance_weighting"""
-    print(f"# of spectra={len(specs)}")
+    # print(f"# of spectra={len(specs)}")
     fluxlen = len(specs[0].flux)
-    print(f"fluxlen={fluxlen}")
+    # print(f"fluxlen={fluxlen}")
     flux_tot = np.zeros(fluxlen)
     var_tot = np.zeros(fluxlen)
     wave_tot = specs[0].wavelength
@@ -191,18 +188,18 @@ def combine_spectra_ivw2(specs):
     """Combine a collection of 1D spectra into a single spectrum using inverse variance weighting"""
     """assumes all spectra have the same dimensionality, and have .wavelength, .flux and .sig attributes"""
     n_spectra = len(specs)
-    print(f"# of spectra={n_spectra}")
+    # print(f"# of spectra={n_spectra}")
     
     # Assuming all spectra have the same wavelength grid
     fluxlen = len(specs[0].flux)
-    print(f"fluxlen={fluxlen}")
+    # print(f"fluxlen={fluxlen}")
     
     # Extract all fluxes and variances into a 2D array (spectra x wavelength)
     all_fluxes = np.array([sp.flux for sp in specs])
     all_vars = np.array([sp.sig ** 2 for sp in specs])  # Squaring the sigmas (aka. stddev) to get variances
     
     # Calculate weights for each wavelength across all spectra
-    weights = 1 / all_vars # weights are the inverse of the variancesa
+    weights = 1 / all_vars # weights are the inverse of the variances
     # NOTE: if in sightline 6 and observation is 0 or 7, within the wavelength window, make the weight 0 (or really small)
     weighted_fluxes = all_fluxes * weights
     

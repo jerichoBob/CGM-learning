@@ -57,6 +57,20 @@ def show_wl_image(ax, image, title="White Light", xh_lim=None, yh_lim=None, cmap
     if yh_lim is not None: ax.set_ylim(yh_lim)
     ax.grid()
 
+def quick_show_wl_image_and_sightlines(image, title="White Light", wcs_ref=None, sightlines=None, xh_lim=None, yh_lim=None, cmap='gnuplot', axis_vis=True, show_label=True):
+    fig, ax = plt.subplots(1, 1, figsize=(8,8))
+    ax = fig.add_axes((0,0,1,1), projection=wcs_ref, polar=False)
+
+    show_wl_image(ax, image, title, xh_lim, yh_lim, cmap, axis_vis)
+    plot_sightlines_wcs(ax, wcs_ref, sightlines, lw=0.5, show_label=show_label)
+    
+    plt.show()
+    
+def show_wl_image_and_sightlines(ax, image, title="White Light", wcs_ref=None, sightlines=None, xh_lim=None, yh_lim=None, cmap='gnuplot', axis_vis=True, show_label=True):
+    show_wl_image(ax, image, title, xh_lim, yh_lim, cmap, axis_vis)
+    plot_sightlines_wcs(ax, wcs_ref, sightlines, lw=0.5, show_label=show_label)
+    
+    
 def shift_coords(xs, ys, dx, dy):
     """ shifts the x,y coords by dx,dy """
     xs = [x+dx for x in xs]
@@ -64,22 +78,45 @@ def shift_coords(xs, ys, dx, dy):
     return xs, ys
 
 
-def plot_sightlines_wcs(mpl_ax, wcs, sightlines, lw=0.5, show_label=True):
+def plot_sightlines_wcs(mpl_ax, wcs, sightlines, lw=0.5, color='w', label="default", show_label=True):
     """ plots the wcs converted sightline extraction boxes on the given mpl axis """
 
     my_cmap = sns.color_palette("husl", len(sightlines))
 
     for sl in sightlines:
-        x_min, x_max, y_min, y_max = bus.sightline_cuts(sl, wcs)
+        x_min, x_max, y_min, y_max = bus.sightline_cuts(sl.radecs, wcs)
         
         xs = [x_min,  x_max, x_max, x_min,  x_min]
         ys = [y_min,  y_min, y_max, y_max,  y_min]
         xs, ys = shift_coords(xs, ys, -0.5, -0.5)
         
-        mpl_ax.plot(xs, ys, color='w', lw=lw, alpha=1.0, zorder=1)
+        mpl_ax.plot(xs, ys, color=color, lw=lw, alpha=1.0, zorder=1)
         
         if show_label:
             mpl_ax.text(xs[2], ys[2], str(sl.label), color='w', fontsize = 14, ha='center', va='center')
+
+def plot_sightlines_wcs_old(mpl_ax, wcs, sl_radecs, lw=0.5, color='w', label="default", show_label=True):
+    """ plots the wcs converted sightline extraction boxes on the given mpl axis """
+
+    my_cmap = sns.color_palette("husl", len(sl_radecs))
+
+    for sl_radec in sl_radecs:
+        # print(f"sl_radec: {sl_radec}") 
+        # print(f"type(sl_radec): {type(sl_radec)}")
+        if type(sl_radec) == bus.Sightline:
+            sl_radec = sl_radec.radecs
+            x_min, x_max, y_min, y_max = bus.sightline_cuts(sl_radec, wcs)
+        else:
+            x_min, x_max, y_min, y_max = bus.sightline_cuts(sl_radec, wcs)
+        
+        xs = [x_min,  x_max, x_max, x_min,  x_min]
+        ys = [y_min,  y_min, y_max, y_max,  y_min]
+        xs, ys = shift_coords(xs, ys, -0.5, -0.5)
+        
+        mpl_ax.plot(xs, ys, color=color, lw=lw, alpha=1.0, zorder=1)
+        
+        if show_label:
+            mpl_ax.text(xs[2], ys[2], str(label), color='w', fontsize = 14, ha='center', va='center')
             
 def plot_pixel_wcs(mpl_ax, x,y, color):
     """ 
@@ -98,6 +135,36 @@ def plot_pixel_wcs(mpl_ax, x,y, color):
                 linewidth=1, 
                 zorder=1)
 
+def plot_spectra(sl, xspec, label=f"Sightline", figsize=(8,2), dpi=200, fontsize=10):
+    """plot_spectra plots the associated XSpectrum1D with a single sightline. 
+    Args:   sl (Sightline): _description_
+            xspec object (spec,var,wave): Xspectrum1D object
+    """
+    wave = xspec.wavelength.value
+    spec = xspec.flux.value
+    err = xspec.sig.value
+        
+    plt.close()
+    fig = plt.figure(figsize=figsize, dpi=dpi)
+    ax_spec = fig.add_axes((0,0,1,1))
+
+    ax_spec.plot(wave, spec, '-', color="k", linewidth=0.5, label="flux")
+    ax_spec.set_xlabel('$\lambda$ ($\AA$)', )
+    ax_spec.set_ylabel('Flux', color='k', rotation=90)  # Primary y-axis label, rotated
+    ax_spec.tick_params(axis='y', labelcolor='k')
+    ax_spec.plot(wave, err, '-', color="r", linewidth=0.5, label="error")
+    ax_spec.legend(loc='upper right', fontsize=fontsize*.8)
+
+    ax_spec.text(0.05, 0.9, 
+            f"{label}",
+            color="black", 
+            fontsize = fontsize, 
+            ha='left', va='top',
+            transform=ax_spec.transAxes)
+ 
+    ax_spec.set_facecolor('darkgrey')
+    
+    display(fig) # plots the figure as a static png
         
 def zoom_plot():
     """ I would love to figure out how to zoom into a wcs projection plot"""

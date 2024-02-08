@@ -385,7 +385,7 @@ def stack_spectra():
     fig = plt.figure(figsize=(14,10))
     fig.suptitle(f"{file_cnt} observations of 1429", fontsize=16)
     gs = gridspec.GridSpec(21, 2*file_cnt, figure=fig)
-    wl_image, wcs_kcwi = bfi.load_original_cube(global_nb_min, global_nb_max)
+    wl_image, wcs_kcwi = bfi.load_narrowband_reference_image(global_nb_min, global_nb_max)
     ax_kcwi = fig.add_subplot(gs[0:6, 3:6], projection=wcs_kcwi)
     show_whitelight_image(ax_kcwi, wl_image, title="KCWI White Light")
 

@@ -12,6 +12,8 @@ WCS-converted to RA/DEC and then to xs,ys, we MUST CONFIRM that:
 import bobutils.layout_utils as lu
 import bobutils.utils as bu
 import bobutils.fileio as bio
+import bobutils.observations as bo
+import bobutils.plotutils as pu
 
 from kcwitools import image as im
 from kcwitools import extract_weighted_spectrum as ke
@@ -30,58 +32,7 @@ global_nb_max = 4696.
 global_cmap = 'gnuplot'
 global_lw = 0.5
 
-def old_stuff():
-    # SNR was waaay too low for a 3x3 (mostly less than 1) when treating 3700-5500 as the continuum
-    sz = 3  # length of one side of the square box
-
-    # First create a narrow-band whitelight image to plot
-    narrowband_center = 4686
-    del_lambda  = 10
-    whitelight= im.build_whitelight(hdr, flux, minwave=narrowband_center - del_lambda, maxwave=narrowband_center + del_lambda)
-
-    fig_size=8
-
-    fig = plt.figure(figsize=(18, 10))
-    # plt.rcParams['text.usetex'] = True
-    # plt.rcParams['font.family'] = 'serif'
-    # ax = fig.add_subplot(111)
-    ax_info, ax_image, ax_spectra = lu.make_image_and_8_plots(plt)
-
-    ax_image.imshow(whitelight/1e4, interpolation='nearest',cmap=plt.get_cmap('gray'),origin="lower")#,vmin=1., vmax=8.)
-
-    font = {'family': 'serif',
-            'color':  'darkred',
-            'weight': 'normal',
-            'size': 14,
-            }
-    color_sightline = 'blue'
-    color_error = 'red'
-    color_snr = 'k'
-
-    output_path = "./analysis/j1429/"
-    for i in range(len(points)): # cycle through each sightline
-        x = x_coords[i]
-        y = y_coords[i]
-        sz = sizes[i]
-        # print("center: (", x,",",y,")")
-
-        xx_A, yy_A, ff, vv = bu.corrected_corner_define(x, y, flux, var, deltax=sz, deltay=sz)
-
-        # the bounding box and text label on the image
-  
-        filename = f'{i}_1d_spectra_{x}.{y}-{sz}x{sz}-{co_begin}-{co_end}.fits'
-        filepath = output_path + filename
-        print("file: ",filename)
-
-        with warnings.catch_warnings():
-            # Ignore model linearity warning from the fitter
-            warnings.simplefilter('ignore')
-            sp=ke.extract_weighted_spectrum(ff, vv, wave, weights='Data', verbose=False)
-            # sp=kcwi_s.extract_square(x, y, wave, flux, var, squaresize=sz, outfile=None)
-
-
-            #plot the extracted spectrum before writing it out to file.
-        # sp.write_to_fits(filepath)
+output_path = "./analysis/j1429/"
 
 
 def load_sightlines():
@@ -244,7 +195,7 @@ def main():
     
     ================= Loading Reference Image =================
     """)    
-    wl_image, wcs_ref = bio.load_original_cube(global_nb_min, global_nb_max)
+    wl_image, wcs_ref = bio.load_narrowband_reference_image(global_nb_min, global_nb_max)
     print("""
     
     ================= Computing Extraction Box RA/DECs =================
@@ -266,22 +217,32 @@ def main():
     ================= Loading Observations =================
     """)
 
-    observations = bio.load_observations()
+    # xs, ys, szs = bus.load_OLD_sightlines()
+    # wl_image, wcs_ref = bio.load_narrowband_reference_image(global_nb_min, global_nb_max)
+    # sl_radecs = bus.radecs_from_sightline_boxes(wcs_ref, xs, ys, szs)
+    observations = bio.get_corrected_kcwi_data(3500, 500)
+
+    # observations = bio.load_observations()
     specs = []
     print("""
     
-    ================= Spectra Extraction for Each Sightline =================
+    ================= Extract Spectrum for Each Sightline =================
     """)    
     for sl_ndx in range(cnt):  # loop through the sightlines
         sl_radec = sl_radecs[sl_ndx] # let's plot for the first sightline only
         # box_ras, box_decs = sl_radec
 
         # spec, var, wave = bu.extract_spectra_from_observations(sl_radec)
-        spec = bu.extract_spectra_from_observations(sl_radec, observations)
+        specs_for_obs = bo.extract_spectra_from_obs(sl_radec, observations)
         specs.append(spec)
+        # filename = f'{i}_1d_spectra_{x}.{y}-{sz}x{sz}-{co_begin}-{co_end}.fits'
+        # filepath = output_path + filename
+        # print("file: ",filename)
+        # sp.write_to_fits(filepath)
+        
 
     show_ref_image(ax_image, wl_image)
-    bu.plot_sightlines_wcs(ax_image, wcs_ref, sl_radecs, color='w-', lw=0.5)
+    pu.plot_sightlines_wcs(ax_image, wcs_ref, sl_radecs, color='w', lw=0.5)
 
     show_sightline_spectra(ax_spectra, specs, 
                            color_sightline='blue', 
@@ -296,6 +257,7 @@ def main():
         mng.window.state('zoomed') #works fine on Windows!    
     plt.subplots_adjust(left=0.038, bottom=0.057, right=0.917, top=0.929, wspace=0.165, hspace=0.244)
     plt.show()
+    # plt.close()
 
 
 if __name__ == "__main__":
