@@ -220,7 +220,7 @@ def main():
     # xs, ys, szs = bus.load_OLD_sightlines()
     # wl_image, wcs_ref = bio.load_narrowband_reference_image(global_nb_min, global_nb_max)
     # sl_radecs = bus.radecs_from_sightline_boxes(wcs_ref, xs, ys, szs)
-    observations = bio.get_corrected_kcwi_data(3500, 500)
+    observations = bio.get_corrected_kcwi_data(3500, 5500)
 
     # observations = bio.load_observations()
     specs = []

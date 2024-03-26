@@ -16,6 +16,8 @@ from kcwitools import utils as kcwi_u
 from linetools.utils import radec_to_coord
 import bobutils.utils as bu
 import bobutils.fileio as bfi
+import bobutils.observations as bo
+
 
 import warnings
 # global variables
@@ -374,7 +376,7 @@ def radecs_from_sightline_boxes(wcs_ref, pt_xs, pt_ys, szs):
 def stack_spectra():
     bobs_mpl_params()
     # get the 7 observation flux and var files
-    observations = bu.get_corrected_kcwi_data(global_nb_min, global_nb_max)
+    observations = bfi.get_corrected_kcwi_data(global_nb_min, global_nb_max)
     file_cnt = len(observations)
 
 
@@ -435,7 +437,7 @@ def stack_spectra():
             else:
                 wcs_cur = WCS(ob.hdr_f).celestial
 
-        sh = ob.wl_k.shape
+        sh = ob.wl.shape
         # print(f"sh={sh}")
         xh_lim, yh_lim = transform_pixels([0, sh[1]], [0, sh[0]], wcs_ref, wcs_cur)
         # xc, yc = wcs_cur.world_to_pixel_values(ra, dec)
@@ -444,8 +446,8 @@ def stack_spectra():
 
         ax2 = fig.add_subplot(gs[7:16, 2*ii:2*(ii+1)], projection= wcs_cur)
         # title = ob.f_file.split("/")[-1].split("_icubes_corrected_flux.fits")[0]
-        title = ob.f_file.split("/")[-1].split("_icubes_corrected_flux.fits")[0]
-        show_whitelight_image(ax2, ob.wl_k, title=title, xh_lim=xh_lim, yh_lim=yh_lim)
+        title = ob.flux_file.split("/")[-1].split("_icubes_corrected_flux.fits")[0]
+        show_whitelight_image(ax2, ob.wl, title=title, xh_lim=xh_lim, yh_lim=yh_lim)
         # display_wl_image(ax2, title, wl_image, xc, yc, xh_lim, yh_lim, ob.hdr_f)
         plot_sightlines_wcs(ax2, wcs_cur, sl_radecs, color='w-', lw=global_lw)
 
@@ -455,17 +457,24 @@ def stack_spectra():
         
         sl_radec = sl_radecs[1] # let's plot for the first sightline only
         box_ras, box_decs = sl_radec
-        spec, var, wave = bu.extract_spectra_from_observations(observations, sl_radec)
+        # spec, var, wave = bu.extract_spectra_from_observations(observations, sl_radec)
+        
+        xspec = bo.extract_spectra_from_obs(sl_radec, observations)
+        combined_xspec = bu.combine_spectra_ivw2(xspec)  
+
 
         lw = 0.5
         ax_spec = fig.add_subplot(gs[17:21, :])    
         # ax_err = ax_spec.twinx()
         ax_err = ax_spec
-        ax_err.plot(wave, var, 'r-', lw=lw, label="Error")
+        wave = combined_xspec.wavelength.value
+        spec = combined_xspec.flux.value
+        err = combined_xspec.sig.value
+        ax_err.plot(wave, err, 'r-', lw=lw, label="Error")
         ax_spec.plot(wave, spec, 'b-', lw=lw, label="Flux")
-        sky = radec_to_coord((box_ras[0], box_decs[0]))
-        ra_str = sky.ra.to_string(u.hour, precision=2, alwayssign=True, pad=True)
-        dec_str = sky.dec.to_string(u.degree, precision=2, alwayssign=True, pad=True)
+        # sky = radec_to_coord((box_ras[0], box_decs[0]))
+        # ra_str = sky.ra.to_string(u.hour, precision=2, alwayssign=True, pad=True)
+        # dec_str = sky.dec.to_string(u.degree, precision=2, alwayssign=True, pad=True)
 
         title = f"""Sightline {ra_str} {dec_str}
     Inverse Variance-weighted Spectrum summed over {file_cnt} Observations"""

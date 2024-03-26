@@ -135,6 +135,9 @@ def load_narrowband_reference_image(nb_min, nb_max):
 def get_corrected_kcwi_data(narrowband_min, narrowband_max):
     """ returns an array of Observation objects (after a few tweaks)"""
     ob_array = load_observations()
+    
+    # for ob in ob_array:
+    #     print(f"ob.wcs_flux (before): {ob.wcs_flux}")
 
     for ob in ob_array:
         ob.wcs_flux = WCS(ob.hdr_f).celestial
@@ -151,5 +154,7 @@ def get_corrected_kcwi_data(narrowband_min, narrowband_max):
         # Loading the variance cube from index 2 of the KCWI fits file
         ob.wcs_var = WCS(ob.hdr_v).celestial # The WCS of the variance cube
 
+    # for ob in ob_array:
+    #     print(f"ob.wcs_flux (after): {ob.wcs_flux}")
 
     return ob_array

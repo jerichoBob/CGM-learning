@@ -23,6 +23,9 @@
 		},
 		{
 			"path": "../astrospec"
+		},
+		{
+			"path": "../mecanique-analytique"
 		}
 	],
 	"settings": {

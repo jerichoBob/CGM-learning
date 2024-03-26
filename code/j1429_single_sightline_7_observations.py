@@ -234,7 +234,7 @@ def main():
         pu.plot_sightlines_wcs(ax_image, obs[i].wcs_flux, sl_radecs, lw=0.5, show_label=False)
 
     show_combined_spectra(ax_combined_spec, combined, 
-                           color_sightline='blue', ``````
+                           color_sightline='blue',
                            color_error='red', 
                            color_snr='k', 
                            co_begin=4864, co_end=4914, 

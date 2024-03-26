@@ -32,25 +32,26 @@ def plotcircle(plt, x, y, labels, sz, c):
 
         plt.text(x[i]-1.5*sz, y[i], labels[i], color=colour)
             
-def show_wl_image(ax, image, title="White Light", xh_lim=None, yh_lim=None, cmap='gnuplot', axis_vis=True):
+def show_wl_image(ax, image, title="White Light", xh_lim=None, yh_lim=None, cmap='gnuplot', axis_vis=True, show_labels=True):
     ax.imshow(image, origin='lower', interpolation='nearest', cmap=cmap, vmin=0)
 
     if axis_vis:    
         ax_type = type(ax).__name__
-        print(f"ax_type: {ax_type}")
-        if ax_type == 'WCSAxesSubplot' or ax_type == 'WCSAxes':
-            ax.coords[0].set_ticks_visible(False)  # Hide RA ticks
-            ax.coords[1].set_ticks_visible(False)  # Hide Dec ticks
-            ax.coords[0].set_ticklabel_visible(False)  # Hide RA tick labels
-            ax.coords[1].set_ticklabel_visible(False)  # Hide Dec tick labels
-        elif ax_type == 'AxesSubplot':
-            ax.set_xticks([])
-            ax.set_yticks([])
-        ax.set_xlabel('')
-        ax.set_ylabel('')
-        # Optional: Hide the spines
-        for spine in ax.spines.values():
-            spine.set_visible(False)
+        # print(f"ax_type: {ax_type}")
+        if not show_labels:
+            if ax_type == 'WCSAxesSubplot' or ax_type == 'WCSAxes':
+                ax.coords[0].set_ticks_visible(False)  # Hide RA ticks
+                ax.coords[1].set_ticks_visible(False)  # Hide Dec ticks
+                ax.coords[0].set_ticklabel_visible(False)  # Hide RA tick labels
+                ax.coords[1].set_ticklabel_visible(False)  # Hide Dec tick labels
+            elif ax_type == 'AxesSubplot':
+                ax.set_xticks([])
+                ax.set_yticks([])
+            ax.set_xlabel('')
+            ax.set_ylabel('')
+            # Optional: Hide the spines
+            for spine in ax.spines.values():
+                spine.set_visible(False)
 
     ax.set_title(title)
     if xh_lim is not None: ax.set_xlim(xh_lim)

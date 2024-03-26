@@ -7,6 +7,8 @@ import os, re
 import argparse
 from PyPDF2 import PdfWriter, PdfReader, PageObject, PaperSize, Transformation
 from PyPDF2.generic import AnnotationBuilder
+from astropy.io import ascii
+import pandas as pd
 
 from pathlib import Path
 from typing import Union, Literal, List
@@ -20,6 +22,11 @@ def find_pdfs(basedir):
         for root, dirs, files in os.walk(basedir)
             for file in files if file.lower().endswith('.pdf'))
 
+def find_dat_files(basedir):
+    return (os.path.join(root, file)
+        for root, dirs, files in os.walk(basedir)
+            for file in files if file.lower().endswith('.dat'))
+    
 def print_list(list):
     for pdf in list:
         print(pdf)
@@ -112,6 +119,7 @@ def get_sightline_from_path(path: str) -> Union[str, None]:
     else:
         sightline = None
     return sightline
+
 def get_redshift_from_path(path: str) -> Union[float, None]:
     """Extract the redshift from the path."""
     redshift_match = re.search(r'z_([\d.]+)', path)
@@ -120,6 +128,7 @@ def get_redshift_from_path(path: str) -> Union[float, None]:
     else:
         redshift = None
     return redshift
+
 def get_ion_index_from_path(path: str) -> Union[int, None]:
     """Extract the ion index from the path."""
     ion_index_match = re.search(r'Ions(\d+)', path)
@@ -151,6 +160,47 @@ def gather_pdfs(paths):
 
     writer.close()
 
+def gather_dat_files(paths):
+    """Gather all dat files into a single .dat file. Label each page with the sightline and redshift"""
+    # ascii.read(paths[0]).write("output.dat", format="csv", overwrite=True)
+
+    # now = datetime.utcnow()
+    # timestamp = now.isoformat() + "Z"
+    # output_file = "./output-" + timestamp + ".pdf"
+
+# output_file = "./output.pdf"
+    # output_file_page_number = 0
+
+# with open(output_file, "wb") as fp:
+    pd_total = pd.DataFrame()
+    for filepath in paths:
+        sl = get_sightline_from_path(filepath)
+        z = get_redshift_from_path(filepath)
+        label = f"J1429 - Sightline: #{sl}  z: {z}"
+        # data = ascii.read(filepath)
+        s=pd.read_csv(filepath,sep=' ')
+        s.insert(0, "SL", sl)
+        s.insert(1, "Z", z)
+        # for col in s.columns:
+        #     print(f"col: {col}")
+
+        # ion=s['Name'].values#s['col1']
+        # wobs=s['Wave_obs'].values #s['col3']
+        # zobs=s['Zabs'].values#s['col4']
+        
+        print("- "*20)
+        print(f"label: {label}")
+        # print(s['Transitions'])
+        print(s)
+        pd_total = pd.concat([pd_total, s], ignore_index=True)
+        
+    pd_total.to_csv('out.csv', index=False)  
+
+            # print(f"filepath: {filepath}")
+    #         label_pages(label, filepath, writer)
+    #         writer.write(fp)
+
+    # writer.close()
 
 
 parser = argparse.ArgumentParser(
@@ -169,9 +219,10 @@ Example usage:
 """, 
                     # epilog='----'
                     )
-parser.add_argument('-d', '--basedir', required=True, help='the directory across which the gathering will occur')
+parser.add_argument('-b', '--basedir', required=True, help='the directory across which the gathering will occur')
 parser.add_argument('-p', '--pdf',    action='store_true', help='gather together the PDF stackplots')
-parser.add_argument('-m', '--merge',    action='store_true', help='merge gathered PDF stackplots into a single PDF file')
+parser.add_argument('-d', '--dat',    action='store_true', help='gather together the dat files')
+parser.add_argument('-m', '--merge',    action='store_true', help='merge gathered files into a single file')
 parser.add_argument('-pp', '--prettyprint',  action='store_true', help='print out the list of gathered PDF stackplots in a pretty format')
 
 if __name__ == "__main__":
@@ -194,4 +245,12 @@ if __name__ == "__main__":
                 # print_list(pdf_files)
                 gather_pdfs(pdf_files)
             
+        if args.dat:
+            dat_files = list(sorted(find_dat_files(basedir)))
+            if args.prettyprint:
+                print_list(dat_files)
+            if args.merge:
+                print("merging Dat files...")
+                # print_list(dat_files)
+                gather_dat_files(dat_files)
             

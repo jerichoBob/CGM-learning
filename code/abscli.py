@@ -4,23 +4,52 @@
 #   python3 -m venv astroresearch
 #   source astroresearch/bin/activate
 
+import sys, os
+
 from astropy.io import fits
+# PYTHONPATH=/Users/robertseaton/School/github_repos/rbcodes
+rbcodes = '/Users/robertseaton/School/github_repos/rbcodes'
+rbcodes_ui = '/Users/robertseaton/School/github_repos/rbcodes-ui2-2'
+for path in sys.path:
+    if rbcodes in path:
+        sys.path.remove(rbcodes)
+
+if rbcodes_ui not in sys.path:
+    sys.path.append(rbcodes_ui)
+
+# for path in sys.path:
+#     print(f"sys.path: {path}")
+
 from GUIs.abstools import Absorber as A
 from GUIs.abstools import Metal_Plot as M   
 import pickle
-import numpy as np
 import csv
-import pandas as pd
 import bobutils.utils as bu
-import sys, os
 import argparse
 
 analysisdir = './analysis/j1429'
 
 def get_ion_redshifts(specdir):
     """ Creates a redshifts dictionary, indexed by a specific redshift, and contains the ions (and their observed wavelength) at that redshift"""
-    linelist_file = os.path.join(specdir,'Identified_LineList.txt')
-    reader = csv.reader(open(linelist_file), delimiter=" ")
+    cwd = os.getcwd()
+    # print(f"cwd: {cwd}")
+    # print(f"specdir: {specdir}")
+    full_specdir = os.path.join(cwd, specdir)
+
+    identified_linelist_file = os.path.join(full_specdir,'Identified_LineList.txt')
+    linelist_identified_file = os.path.join(full_specdir,'LineList_Identified.txt')
+    if os.path.exists(identified_linelist_file): 
+        filepath=identified_linelist_file
+    elif os.path.exists(linelist_identified_file):
+        filepath=linelist_identified_file
+    else:
+        print(f"""\nERROR: Can\'t find:
+{identified_linelist_file} 
+              or 
+{linelist_identified_file}!
+""")
+        sys.exit(-1)
+    reader = csv.reader(open(filepath), delimiter=" ")
     redshifts = {}
     next(reader) # skip header
     for row in sorted(reader):
@@ -79,9 +108,11 @@ def load_transitions_from_scratch(specdir, basedir, z):
     print(f"z: {z}  lines: {lines}")
     try:
         absys=A.Absorber(z=z,wave=wave,flux=flux,error=error,lines=lines, window_lim=[-2000,2000], order_init=0, mask_init=[-200,200])  
+        # absys=A.Absorber(z=z,wave=wave,flux=flux,error=error,lines=lines, window_lim=[-2000,2000],  mask_init=[-200,200])  
         ions=absys.ions
 
         M.Transitions(ions, basedir=basedir)
+        # M.Transitions(ions)
     except Exception as e:
         print(f"Exception: {e}")
 
@@ -95,38 +126,6 @@ def process_transitions(specdir, z, use_pickle = False):
     else:
         load_transitions_from_scratch(specdir, basedir, z)
 
-
-def main_unused():
-    for redshift, line_list in redshifts.items():
-        lines = []
-        for el in line_list:
-            ion = el["ion"]
-            obs = el["observed"]
-            line = get_rest_wavelength(ion, obs, redshift)
-            lines.append(bu.sig_figs(float(line),8))
-
-        z = float(redshift)
-        lines = sorted(lines)
-        last_12_lines = lines[-12:] # have to do this because Metal_Plot.Transitions() can only take up to 12 lines
-
-        # Create an absorber class to feed into the main GUI
-        print("."*80)
-        print(f"z: {z}  lines: {last_12_lines}")
-        print(f"""
-    A.Absorber(z={z}, 
-            wave={wave}, 
-            flux={flux}, 
-            error={error}, 
-            lines={lines}, 
-            window_lim={[-2000,2000]})
-    """)
-        try:
-            absys=A.Absorber(z=z,wave=wave,flux=flux,error=error,lines=last_12_lines, window_lim=[-2000,2000])  
-            ions=absys.ions
-            M.Transitions(ions)
-        except Exception as e:
-            print(f"Exception: {e}")
-        print(". "*60)
 
 parser = argparse.ArgumentParser(
                     prog='abscli.py',
