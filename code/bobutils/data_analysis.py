@@ -1,4 +1,10 @@
-def create_gaussian_fitter(wv, fx, xlims):
+from astropy.wcs import WCS, FITSFixedWarning
+import warnings
+
+warnings.simplefilter('ignore')
+warnings.filterwarnings('ignore', category=FITSFixedWarning)
+
+def create_gaussian_fitter(wv, fx, xlims, DEBUG=False):
     ''' fit the absorption line, bounded by the evaluation limits xlims, with a gaussian '''
     import numpy as np
     from astropy.modeling import models, fitting
@@ -10,8 +16,11 @@ def create_gaussian_fitter(wv, fx, xlims):
     stddev_guess = 0.5*(delwv) # this should be half of the width of the absorber
     
     # since we have an absorber, the gaussian fit drops down from the continuum
-    g_init = (models.Const1D(amp_cont) +
-              models.Gaussian1D(amplitude=(amp_min - amp_cont), mean=mean_guess, stddev=stddev_guess))
+    # g_init = (models.Const1D(amp_cont) +
+    #           models.Gaussian1D(amplitude=(amp_min - amp_cont), mean=mean_guess, stddev=stddev_guess))
+    g_init = (models.Gaussian1D(amplitude=(amp_min - amp_cont), 
+                                mean=mean_guess, 
+                                stddev=stddev_guess))
     
     fit_g = fitting.LevMarLSQFitter()
     g = fit_g(g_init, wv, fx)
@@ -21,7 +30,7 @@ def create_gaussian_fitter(wv, fx, xlims):
     # print(f"fit_info['message']: {fit_info['message']}")
     
     if fit_info['param_cov'] is None:
-        print("fit_info['param_cov'] is None - The fit is not sensible! Check initial_guesses")
+        if DEBUG: print("fit_info['param_cov'] is None - The fit is not sensible! Check initial_guesses")
         return g, fit_g, False
         # raise ValueError('gaussian_ew: The fit is not sensible! Check initial_guesses')
     
@@ -67,12 +76,58 @@ def calculate_ew_from_gaussian(g, fit_g, xlims):
     
     ew = quad(g, xlims[0], xlims[1])[0]
 
-    amp = np.abs(g.parameters[1]) # amplitude of the gaussian
-    stdev = g.parameters[3] # stddev of the gaussian
+    print("Inside calculate_ew_from_gaussian  ----- ")
+    print(f"{g=}")
+    # if we are using     
+    # g_init = (models.Const1D(amp_cont) +
+    #   models.Gaussian1D(amplitude=(amp_min - amp_cont), mean=mean_guess, stddev=stddev_guess))
+    # it will produce:
+    # g=<CompoundModel(amplitude_0=0.97042456, amplitude_1=-0.62764252, mean_1=-7.56856115, stddev_1=27.35040418)>
+    # if we are using:
+    
+    # amp = np.abs(g.parameters[1]) # amplitude of the gaussian for compound model
+    # stdev = g.parameters[3] # stddev of the gaussian for compound model
+    amp = np.abs(g.parameters[0]) # amplitude of the gaussian for single model
+    stdev = g.parameters[2] # stddev of the gaussian for single model
 
     x = amp
     y = stdev
     cov = fit_g.fit_info['param_cov'] #covariance matrix
     ew_sig = ew * np.sqrt(cov[0,0] / x**2 + cov[2,2] / y**2 + 2 * cov[0,2] / (x*y))
 
-    return ew, ew_sig
+    return ew, ew_sig, cont, amp, mean, stdev
+
+def fit_gaussian_singlet(wv, fx, xlims, DEBUG=False):
+    ''' fit the absorption line, bounded by the evaluation limits xlims, with a gaussian '''
+    import numpy as np
+    from astropy.modeling import models, fitting
+
+    delwv  = np.double(xlims[1])-np.double(xlims[0])
+    amp_min = fx.min() # this should find where the flux bottoms out
+    amp_cont = fx.max() # this should approximate the continuum
+    mean_guess = np.mean(xlims) # this should be the center of the absorber
+    stddev_guess = 0.5*(delwv) # this should be half of the width of the absorber
+    
+    # since we have an absorber, the gaussian fit drops down from the continuum
+    g_init = (models.Const1D(amp_cont) +
+              models.Gaussian1D(amplitude=(amp_min - amp_cont), 
+                                mean=mean_guess, 
+                                stddev=stddev_guess))
+    
+    fit_g = fitting.LevMarLSQFitter()
+    g = fit_g(g_init, wv, fx)
+
+    fit_info = fit_g.fit_info # fit_info contains the results from the last fit performed
+
+    
+    if fit_info['param_cov'] is None:
+        if DEBUG: print("fit_info['param_cov'] is None - The fit is not sensible! Check initial_guesses")
+        good_fit = False
+    else:
+        good_fit = True
+
+    
+    return g, fit_g, good_fit
+    
+def fit_gaussian_doublet():
+    pass
